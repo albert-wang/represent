@@ -37,6 +37,7 @@ assumed to be 4.
 	pif            | A 32-bit floating point representation of pi.
 	ef             | A 32-bit floating point representation of pi.
 	[v;v;v;v]      | Matrix. Each vector must have the same size. Row-major. May omit the []s for the vectors.
+	identN         | Identity matrix, N may be 2, 3, or 4.
 	{guid}         | A 128-bit GUID. No expressions may be done on this value.
 	`string`       | A string. No expressions may be done on this value.
 
@@ -53,6 +54,7 @@ Allowed operators are:
 	>>, <<         | Right and left shift. No sign extension.
 	>>>, <<<       | Right and left rotate.
 	s>>, s<<       | Right and left shift. Sign extended.
+	'              | Transpose matrix. 
 	~, &, |        | Binary operators.
 
 There are also some functions that may be used to build up values.
