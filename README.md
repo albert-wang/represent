@@ -36,7 +36,7 @@ assumed to be 4.
 	e              | A 64-bit floating point representation of pi.
 	pif            | A 32-bit floating point representation of pi.
 	ef             | A 32-bit floating point representation of pi.
-	[v;v;v;v]      | Matrix. Each vector must have the same number of components. Row-major. May omit the []s for the vectors.
+	[v;v;v;v]      | Matrix. Each vector must have the same size. Row-major. May omit the []s for the vectors.
 	{guid}         | A 128-bit GUID. No expressions may be done on this value.
 	`string`       | A string. No expressions may be done on this value.
 
