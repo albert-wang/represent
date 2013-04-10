@@ -28,6 +28,11 @@ namespace Represent
 		tokens.push_back(tk);
 	}
 
+	void TokenStream::push(const TokenStream& other)
+	{
+		std::copy(other.begin(), other.end(), std::back_inserter(tokens));
+	}
+
 	TokenStream& TokenStream::operator<<(const Token& tk)
 	{
 		push(tk);
@@ -52,6 +57,16 @@ namespace Represent
 	TokenStream::const_iterator TokenStream::end() const
 	{
 		return tokens.end();
+	}
+
+	const std::vector<Token> TokenStream::getTokens() const
+	{
+		return tokens;
+	}
+
+	void TokenStream::clear() 
+	{
+		return tokens.clear();
 	}
 
 	std::string toString(TokenType tk)

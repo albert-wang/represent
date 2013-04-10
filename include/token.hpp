@@ -13,9 +13,18 @@ namespace Represent
 	(TOKEN_NUMBER)	 		\
 	(TOKEN_DECIMAL_POINT)   \
 	(TOKEN_DELIMIT)         \
-	(TOKEN_BINARY_OPERATOR)
+	(TOKEN_OPERATOR)		\
+	(TOKEN_STACK_REFERENCE)
 
 	MAKE_FULL_ENUM(TokenType, 0, TOKEN_SOURCE);
+
+#define OPERATOR_TYPES		\
+	(OPERATOR_ADD)			\
+	(OPERATOR_MINUS)		\
+	(OPERATOR_MULTIPLY)		\
+	(OPERATOR_DIVIDE)
+
+	MAKE_FULL_ENUM(OperatorType, 0, OPERATOR_TYPES);
 
 	struct Token
 	{
@@ -42,7 +51,11 @@ namespace Represent
 		const_iterator end() const;
 
 		void push(const Token& tk);
+		void push(const TokenStream& other);
 		TokenStream& operator<<(const Token& tk);
+
+		const std::vector<Token> getTokens() const;
+		void clear();
 	private:
 		std::vector<Token> tokens;
 	};
