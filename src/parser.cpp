@@ -160,6 +160,10 @@ namespace Represent
 
 		expression(begin, end, result);
 
+		//Simplify the expression - convert numbers into stack references, variables into stack references.
+		//Evaluate functions
+		//Evaluate entire expression.
+
 		/*
 		expression = expression | value | variable | function >> binary_operator >>
 		part = expression | value | variable | function
