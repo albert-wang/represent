@@ -39,7 +39,7 @@ namespace Represent
 			}
 		}
 
-		bool typeCheck(const EvaluationContext::StorageCell& first, const EvaluationContext::StorageCell& second)
+		bool typeCheck(const StorageCell& first, const StorageCell& second)
 		{
 			if (first.which() == second.which())
 			{
@@ -54,6 +54,10 @@ namespace Represent
 			return false;
 		}
 	}
+
+	Function::Function(Function::StackFunction f)
+		:function(f)
+	{}
 
 	EvaluationContext::EvaluationContext(const std::string& value)
 	{
@@ -85,15 +89,19 @@ namespace Represent
 			std::cout << *it << "\n";
 		}
 
-		std::cout << "RPN ========================\n";
-		TokenStream rpn = shuntingYard(stream);
-		for (auto it = rpn.begin(); it != rpn.end(); ++it)
+		try
 		{
-			std::cout << *it << "\n";
-		}
+			TokenStream rpn = shuntingYard(stream);
+			std::cout << "RPN ========================\n";
+			for (auto it = rpn.begin(); it != rpn.end(); ++it)
+			{
+				std::cout << *it << "\n";
+			}
+		} catch (...)
+		{}
 	}
 
-	void EvaluationContext::define(const std::string& name, const EvaluationContext::StorageCell& cell)
+	void EvaluationContext::define(const std::string& name, const StorageCell& cell)
 	{
 		auto it = identifiers.find(name);
 		if (it == identifiers.end())
@@ -115,7 +123,7 @@ namespace Represent
 		}
 	}
 
-	EvaluationContext::StorageCell& EvaluationContext::lookup(StorageCell& cell)
+	StorageCell& EvaluationContext::lookup(StorageCell& cell)
 	{
 		Identifier * tryIdent = boost::get<Identifier>(&cell);
 		if (tryIdent)
@@ -135,7 +143,7 @@ namespace Represent
 		}
 	}
 
-	EvaluationContext::StorageCell EvaluationContext::evaluate()
+	StorageCell EvaluationContext::evaluate()
 	{
 		//Convert to an RPN representation.
 		TokenStream rpn = shuntingYard(stream);
@@ -156,6 +164,15 @@ namespace Represent
 						evaluateOperator(it->value, stack, *this);
 						break;
 					}
+					case TOKEN_FUNCTION_IDENTIFIER:
+					{
+						Function * target = boost::get<Function>(&lookup(storage.at(it->value)));
+						if (target->function)
+						{
+							target->function(target, stack, *this);
+						}
+						break;
+					}
 					default:
 					{
 						std::cout << "Unrecognized token type: " << *it << "\n";
@@ -174,7 +191,7 @@ namespace Represent
 		return stack.back();
 	}
 
-	EvaluationContext::StorageCell evaluate(const std::string& val)
+	StorageCell evaluate(const std::string& val)
 	{
 		EvaluationContext context(val);
 		return context.evaluate();
@@ -221,9 +238,97 @@ namespace Represent
 					operatorStack.push_back(*it);
 					break;
 				}
+				case TOKEN_FUNCTION_IDENTIFIER:
+				{
+					operatorStack.push_back(*it);
+					break;
+				}
+				case TOKEN_ARG_DELIMIT: 
+				{
+					while (!operatorStack.empty())
+					{
+						Token top = operatorStack.back();
+
+						//Left paren
+						if (top.type == TOKEN_PAREN && top.value == 0)
+						{
+							break;
+						}
+
+						operatorStack.pop_back();
+						rpn.push(top);
+					}
+
+					if (operatorStack.empty())
+					{
+						throw "Mismatched parens or misplaced comma";
+					}
+					break;
+				}
+				case TOKEN_PAREN:
+				{
+					//Open paren 
+					if (it->value == 0)
+					{
+						operatorStack.push_back(*it);
+					}
+					//Close paren
+					else if (it->value == 1)
+					{
+						while (!operatorStack.empty())
+						{
+							Token top = operatorStack.back();
+
+							//Left paren
+							if (top.type == TOKEN_PAREN && top.value == 0)
+							{
+								break;
+							}
+
+							operatorStack.pop_back();
+							rpn.push(top);
+						}
+
+						if (operatorStack.empty())
+						{
+							throw "Mismatched parens";
+						}
+
+						Token paren = operatorStack.back();
+						if (paren.type != TOKEN_PAREN || paren.value != 0)
+						{
+							throw "Top used to be open paren, but now is not?";
+						}
+
+						operatorStack.pop_back();
+
+						if (operatorStack.empty())
+						{
+							throw "Empty operator stack - no function call token?";
+						}
+
+						Token ident = operatorStack.back();
+						if (ident.type != TOKEN_FUNCTION_IDENTIFIER)
+						{
+							throw "This call is not a function.";
+						}
+
+						operatorStack.pop_back();
+						rpn.push(ident);
+					}
+					else
+					{
+						//Error.
+						throw "Paren not open nor close?";
+					}
+
+					break;
+				}
 				default:
 				{
 					//Unexpected token :(
+					std::cout << "Unexpected token: " << *it << "\n";
+					throw "Unexpected Token";
 				}
 			}
 
@@ -239,21 +344,28 @@ namespace Represent
 		return rpn;
 	}
 
-
-	TokenStream simplify(const TokenStream& stream, std::vector<EvaluationContext::StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers)
+	//This takes in a stream of raw tokens, and then converts things like
+	//numbers, identifiers and functions into single tokens so its easier to convert
+	//to RPN later on.
+	TokenStream simplify(const TokenStream& stream, std::vector<StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers)
 	{
 		TokenStream result;
 
 		for (auto it = stream.begin(); it != stream.end();)
 		{
-			
 			while (it->type != TOKEN_BASE_FLAG
 				&& it->type != TOKEN_FUNCTION_IDENTIFIER
 				&& it->type != TOKEN_IDENTIFIER_RAW
+				&& it != stream.end()
 				) 
 			{
 				result.push(*it);
 				++it;
+			}
+
+			if (it == stream.end())
+			{
+				break;
 			}
 
 			//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
@@ -267,11 +379,24 @@ namespace Represent
 				storage.push_back(value);
 				result.push(Token(TOKEN_STACK_REFERENCE, index));
 			}
-
 			else if (it->type == TOKEN_FUNCTION_IDENTIFIER)
 			{
-				//Skip this token, dosn't really tell us anyhting.
-				++it;
+				Identifier ident;
+				it = convertIdentifier(boost::next(it, 1), stream.end(), ident.name);
+
+				auto lookup = identifiers.find(ident.name);
+				if (lookup == identifiers.end())
+				{
+					//Allocate a storage cell for the identifier. 
+					boost::uint32_t idIndex = storage.size();
+					storage.push_back(Null());
+
+					identifiers[ident.name] = idIndex;
+				} 
+
+				boost::uint32_t index = storage.size();
+				storage.push_back(ident);
+				result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index));
 			}
 			//Similarly, for a TOKEN_IDENTIFIER_RAW, what follows is a series of characters.
 			//Convert to a string, and push it as a TOKEN_STACK_REFERENCE 

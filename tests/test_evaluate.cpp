@@ -54,3 +54,57 @@ BOOST_AUTO_TEST_CASE(only_identifiers)
 
 	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(8));	
 }
+
+namespace 
+{
+	using namespace Represent;
+
+	//A few test functions.
+	void incr(Function *, std::vector<StorageCell>& stack, EvaluationContext& ctx)
+	{
+		Value a = boost::get<Value>(ctx.lookup(stack.back()));
+		stack.pop_back();
+
+		stack.push_back(a + 1);
+	}
+}
+
+/*
+ctx(
+	"add = defun { pop pop + push }"
+	"add(increment(3), increment(4) + 4)"
+	=> 13 
+*/
+
+BOOST_AUTO_TEST_CASE(test_function_call)
+{
+	Represent::EvaluationContext ctx("increment(4)");
+	ctx.define("increment", Function(incr));
+
+
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(5));
+}
+
+BOOST_AUTO_TEST_CASE(test_function_call_expr)
+{
+	Represent::EvaluationContext ctx("increment(4 + 4)");
+	ctx.define("increment", Function(incr));
+
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(9));
+}
+
+BOOST_AUTO_TEST_CASE(test_function_call_fcall)
+{
+	Represent::EvaluationContext ctx("increment(increment(5))");
+	ctx.define("increment", Function(incr));
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(7));
+}
+
+BOOST_AUTO_TEST_CASE(expression_with_function)
+{
+	Represent::EvaluationContext ctx("-increment(-increment(4))");
+	ctx.define("increment", Function(incr));
+
+	ctx.dumpState();
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(4));
+}

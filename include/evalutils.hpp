@@ -14,8 +14,9 @@ namespace Represent
 
 		void operator()(const Null& n) const;
 		void operator()(const Identifier& id) const;
+		void operator()(const Function& f) const;
 	};
 
 
-	void evaluateOperator(boost::uint32_t op, std::vector<EvaluationContext::StorageCell>& stack, EvaluationContext& ctx);
+	void evaluateOperator(boost::uint32_t op, std::vector<StorageCell>& stack, EvaluationContext& ctx);
 }

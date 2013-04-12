@@ -7,6 +7,14 @@
 #pragma once
 namespace Represent
 {
+	class EvaluationContext;
+	struct Identifier;
+	struct Null;
+	struct Function;
+
+	//TODO: Vector4<Value>, Matrix4<Value>, Quaternion<Value>, GUID
+	typedef boost::variant<Value, std::string, Function, Identifier, Null> StorageCell;
+
 	//A string used to lookup in the identifier map.
 	struct Identifier
 	{
@@ -18,12 +26,17 @@ namespace Represent
 	struct Null
 	{};
 
-	struct EvaluationContext
+	struct Function
+	{
+		typedef void(*StackFunction)(Function*, std::vector<StorageCell>&, EvaluationContext&);
+
+		explicit Function(StackFunction f);
+		StackFunction function;
+	};
+
+	class EvaluationContext
 	{
 	public:
-		//TODO: Vector4<Value>, Matrix4<Value>, Quaternion<Value>, GUID, Funciton
-		typedef boost::variant<Value, std::string, Identifier, Null> StorageCell;
-
 		explicit EvaluationContext(const std::string& text);
 
 		StorageCell evaluate();
@@ -45,7 +58,7 @@ namespace Represent
 		TokenStream stream;
 	};
 
-	EvaluationContext::StorageCell evaluate(const std::string& text);
+	StorageCell evaluate(const std::string& text);
 
 	template<typename T>
 	T evaluateAs(const std::string& text)
@@ -55,6 +68,6 @@ namespace Represent
 	}
 
 	//Some utility functions that evaluation context uses.
-	TokenStream simplify(const TokenStream& stream, std::vector<EvaluationContext::StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers);
+	TokenStream simplify(const TokenStream& stream, std::vector<StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers);
 	TokenStream shuntingYard(const TokenStream& stream);
 }

@@ -13,8 +13,13 @@ namespace Represent
 		std::cout << "Id[" << id.name << "]";
 	}
 
+	void OutputCell::operator() (const Function& f) const
+	{
+		std::cout << "Function[" << (void*)f.function << "]";
+	}
 
-	void evaluateOperator(boost::uint32_t op, std::vector<EvaluationContext::StorageCell>& stack, EvaluationContext& ctx)
+
+	void evaluateOperator(boost::uint32_t op, std::vector<StorageCell>& stack, EvaluationContext& ctx)
 	{
 		switch(op)
 		{
