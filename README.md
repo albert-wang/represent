@@ -39,6 +39,7 @@ point values.
 	ef             | A 32-bit floating point representation of e.
 	[v;v;v;v]      | Matrix. Each vector must have the same size. Row-major. May omit the []s for the vectors.
 	identN         | Identity matrix, N may be 2, 3, or 4.
+	{guid}         | A 128-bit GUID. No expressions may be done on this value.
 	`string`       | A string. No expressions may be done on this value.
 
 Allowed operators are:
@@ -85,6 +86,7 @@ the format will be displayed in big-endian format. The assumed byte size is 8 bi
 	base64        | N | Base64.
 	sf            | N | 32-bit floating point.
 	df            | N | 64-bit floating point.
+	str           | N | Takes the binary representation, turns it into bytes, and then into a UTF8 string.
 
 To specify a format, use the -f option, and seperate different descriptors with a space.
 Binary and Hexadecimal may be followed by a comma delimited list in paraentheses, which 

@@ -12,17 +12,24 @@ namespace Represent
 	(TOKEN_BASE_FLAG)       \
 	(TOKEN_NUMBER)	 		\
 	(TOKEN_DECIMAL_POINT)   \
-	(TOKEN_DELIMIT)         \
 	(TOKEN_OPERATOR)		\
-	(TOKEN_STACK_REFERENCE)
+	(TOKEN_PAREN)           \
+	(TOKEN_ARG_DELIMIT)		\
+	(TOKEN_IDENTIFIER_RAW)	\
+	(TOKEN_RAW)				\
+	(TOKEN_STACK_REFERENCE)	\
+	(TOKEN_IDENTIFIER)		\
+
 
 	MAKE_FULL_ENUM(TokenType, 0, TOKEN_SOURCE);
 
 #define OPERATOR_TYPES		\
-	(OPERATOR_ADD)			\
+	(OPERATOR_PLUS)			\
 	(OPERATOR_MINUS)		\
 	(OPERATOR_MULTIPLY)		\
-	(OPERATOR_DIVIDE)
+	(OPERATOR_DIVIDE)		\
+	(OPERATOR_UNARY_PLUS)	\
+	(OPERATOR_UNARY_MINUS)
 
 	MAKE_FULL_ENUM(OperatorType, 0, OPERATOR_TYPES);
 
@@ -52,6 +59,8 @@ namespace Represent
 
 		void push(const Token& tk);
 		void push(const TokenStream& other);
+		void pop();
+		
 		TokenStream& operator<<(const Token& tk);
 
 		const std::vector<Token> getTokens() const;

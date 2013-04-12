@@ -7,4 +7,14 @@
 namespace Represent
 {
 	TokenStream parse(const std::string& text);
+
+	//Parts.
+	namespace Parse
+	{
+		size_t expression(const char * begin, const char * end, TokenStream& out);
+		size_t function(const char * begin, const char * end, TokenStream& out);
+		size_t unaryOperator(const char * begin, const char * end, TokenStream& out);
+		size_t binaryOperator(const char * begin, const char * end, TokenStream& out);
+		size_t identifier(const char * begin, const char * end, TokenStream& out);
+	}
 }

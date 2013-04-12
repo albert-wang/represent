@@ -23,6 +23,7 @@ void compare(const TokenStream& ts, boost::uint32_t * buffer, size_t len)
 	BOOST_CHECK_EQUAL_COLLECTIONS(tokens.begin(), tokens.end(), comp.begin(), comp.end());
 }
 
+#define AUTO_COMPARE(first, arr) compare(first, arr, sizeof(arr) / sizeof(arr[0]))
 
 BOOST_AUTO_TEST_CASE(parse_number)
 {
@@ -38,7 +39,7 @@ BOOST_AUTO_TEST_CASE(parse_binary)
 	boost::uint32_t expected[] = {TOKEN_BASE_FLAG, 2, TOKEN_NUMBER, 0, TOKEN_NUMBER, 0, TOKEN_NUMBER, 0, TOKEN_NUMBER, 0, TOKEN_NUMBER, 1, 
 		TOKEN_NUMBER, 1, TOKEN_NUMBER, 1, TOKEN_NUMBER, 1};
 
-	compare(tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	AUTO_COMPARE(tokens, expected);
 }
 
 BOOST_AUTO_TEST_CASE(parse_octal)
@@ -46,13 +47,13 @@ BOOST_AUTO_TEST_CASE(parse_octal)
 	TokenStream tokens = Represent::parse("0777");
 	boost::uint32_t expected[] = {TOKEN_BASE_FLAG, 8, TOKEN_NUMBER, 7, TOKEN_NUMBER, 7, TOKEN_NUMBER, 7}; 
 
-	compare(tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	AUTO_COMPARE(tokens, expected);
 }
 
 BOOST_AUTO_TEST_CASE(parse_hex)
 {
 	boost::uint32_t expected[] = {TOKEN_BASE_FLAG, 16, TOKEN_NUMBER, 15, TOKEN_NUMBER, 0, TOKEN_NUMBER, 5};
-	compare(Represent::parse("0xF05"), expected, sizeof(expected) / sizeof(expected[0]));
+	AUTO_COMPARE(Represent::parse("0xF05"), expected);
 }
 
 BOOST_AUTO_TEST_CASE(parse_decimal) 
@@ -98,15 +99,50 @@ BOOST_AUTO_TEST_CASE(convert_decimal)
 BOOST_AUTO_TEST_CASE(parse_simple_expression)
 {
 	TokenStream tokens = Represent::parse("42 + 5");
-	boost::uint32_t expected[] = {TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, TOKEN_NUMBER, 2, TOKEN_OPERATOR, OPERATOR_ADD, TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 5};
+	boost::uint32_t expected[] = {TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, TOKEN_NUMBER, 2, TOKEN_OPERATOR, OPERATOR_PLUS, TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 5};
 
 	compare(tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	AUTO_COMPARE(tokens, expected);
 }
 
 BOOST_AUTO_TEST_CASE(fail_parse_expression)
 {
 	TokenStream tokens = Represent::parse("42 + ");
-	boost::uint32_t expected[] = {TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, TOKEN_NUMBER, 2};
+	BOOST_CHECK(tokens.end() == tokens.begin());
+}
 
-	compare(tokens, expected, sizeof(expected) / sizeof(expected[0]));	
+BOOST_AUTO_TEST_CASE(parse_unary_plus)
+{
+	boost::uint32_t expected[] = {TOKEN_OPERATOR, OPERATOR_UNARY_PLUS, TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4};
+	AUTO_COMPARE(Represent::parse("+4"), expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_unary_minus)
+{
+	boost::uint32_t expected[] = {TOKEN_OPERATOR, OPERATOR_UNARY_MINUS, TOKEN_BASE_FLAG, 2, TOKEN_NUMBER, 1};
+	AUTO_COMPARE(Represent::parse("-0b1"), expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_multiple_unary_op)
+{
+	TokenStream tokens = Represent::parse("+++++4");
+	BOOST_CHECK(tokens.begin() == tokens.end());
+}
+
+BOOST_AUTO_TEST_CASE(parse_function)
+{
+	TokenStream tokens = Represent::parse("fun(1, 2, 3)");
+	boost::uint32_t expected[] = {
+		TOKEN_FUNCTION_IDENTIFIER, 0, 
+		TOKEN_IDENTIFIER_RAW, 0, TOKEN_RAW, 'f', TOKEN_RAW, 'u', TOKEN_RAW, 'n', TOKEN_PAREN, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1, TOKEN_ARG_DELIMIT, 0, TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 2, TOKEN_ARG_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 3, TOKEN_PAREN, 1};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(function_names_cannot_end_with_dash)
+{
+	TokenStream tokens = Represent::parse("fun-(1, 2, 3)");
+	BOOST_CHECK(tokens.begin() == tokens.end());
 }

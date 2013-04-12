@@ -33,6 +33,11 @@ namespace Represent
 		std::copy(other.begin(), other.end(), std::back_inserter(tokens));
 	}
 
+	void TokenStream::pop()
+	{
+		tokens.pop_back();
+	}
+
 	TokenStream& TokenStream::operator<<(const Token& tk)
 	{
 		push(tk);

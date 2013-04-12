@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 
+#include "evalutils.hpp"
+
 namespace Represent
 {
 	namespace
@@ -12,9 +14,13 @@ namespace Represent
 		{
 			switch(op)
 			{
-				case OPERATOR_ADD: 
+				case OPERATOR_PLUS: 
 				case OPERATOR_MINUS: 
-					return 0;
+					return 10;
+
+				case OPERATOR_UNARY_PLUS:
+				case OPERATOR_UNARY_MINUS: 
+					return 90;
 
 				default:
 					std::cout << "Unrecognized operator: " << op;
@@ -60,27 +66,14 @@ namespace Represent
 				{
 					case TOKEN_OPERATOR:
 					{
-						if (it->value == OPERATOR_ADD)
-						{
-							StorageCell a = stack.back();
-							stack.pop_back();
-							StorageCell b = stack.back();
-							stack.pop_back();
-
-							Value av = boost::get<Value>(a);
-							av += boost::get<Value>(b);
-
-							stack.push_back(av);
-							break;
-						}
+						evaluateOperator(it->value, stack);
+						break;
 					}
 					default:
 					{
 						std::cout << "Unrecognized token type: " << *it << "\n";
 					}
 				}
-
-				break;
 			}
 			else
 			{
@@ -113,7 +106,7 @@ namespace Represent
 			{
 				case TOKEN_STACK_REFERENCE:
 				{
-					rpn.push(*it);					
+					rpn.push(*it);
 					break;
 				}
 				case TOKEN_OPERATOR: 
@@ -166,11 +159,16 @@ namespace Represent
 
 		for (auto it = stream.begin(); it != stream.end();)
 		{
+			//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
+			//which represents a number. Convert it, and push a TOKEN_STACK_REFERENCE instead.
 			while (it->type != TOKEN_BASE_FLAG) 
 			{
 				result.push(*it);
 				++it;
 			}
+
+			//Similarly, for a TOKEN_IDENTIFIER_RAW, what follows is a series of characters.
+			//Convert to a string, and push it as a TOKEN_STACK_REFERENCE 
 
 			boost::uint32_t index = storage.size();
 

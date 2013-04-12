@@ -3,13 +3,19 @@
 #include "conversion.hpp"
 #include "parser.hpp"
 
+#pragma once
 namespace Represent
 {
+	struct Identifier
+	{
+		boost::uint32_t address;
+	};
+
 	struct EvaluationContext
 	{
 	public:
 		//TODO: Vector4<Value>, Matrix4<Value>, Quaternion<Value>, GUID, Funciton
-		typedef boost::variant<Value, std::string> StorageCell;
+		typedef boost::variant<Value, std::string, Identifier> StorageCell;
 
 		explicit EvaluationContext(const std::string& text);
 
