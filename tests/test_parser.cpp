@@ -141,8 +141,55 @@ BOOST_AUTO_TEST_CASE(parse_function)
 	AUTO_COMPARE(tokens, expected);
 }
 
+BOOST_AUTO_TEST_CASE(parse_identifier_only)
+{
+	TokenStream tokens = Represent::parse("id");
+	boost::uint32_t expected[] = {
+		TOKEN_IDENTIFIER_RAW, 0, TOKEN_RAW, 'i', TOKEN_RAW, 'd'
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
 BOOST_AUTO_TEST_CASE(function_names_cannot_end_with_dash)
 {
 	TokenStream tokens = Represent::parse("fun-(1, 2, 3)");
 	BOOST_CHECK(tokens.begin() == tokens.end());
+}
+
+BOOST_AUTO_TEST_CASE(parse_identifier)
+{
+	TokenStream tokens = Represent::parse("pi + 4");
+	boost::uint32_t expected[] = {
+		TOKEN_IDENTIFIER_RAW, 0, TOKEN_RAW, 'p', TOKEN_RAW, 'i', 
+		TOKEN_OPERATOR, OPERATOR_PLUS, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4
+	};
+
+	AUTO_COMPARE(tokens, expected);
+	/*
+	"abc = defun [pop,pop,pop,*,*,push]"
+	 dot = defun { 
+		a pop = 
+		b pop =
+
+		a 0 ind b 0 ind *
+		a 1 ind b 1 ind *
+		a 2 ind b 2 ind *
+		a 3 ind b 3 ind *
+		+ + +
+	}
+	*/
+}
+
+BOOST_AUTO_TEST_CASE(parse_identifier_2)
+{
+	TokenStream tokens = Represent::parse("4 + pi");
+	boost::uint32_t expected[] = {
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4,
+		TOKEN_OPERATOR, OPERATOR_PLUS, 
+		TOKEN_IDENTIFIER_RAW, 0, TOKEN_RAW, 'p', TOKEN_RAW, 'i', 
+	};
+
+	AUTO_COMPARE(tokens, expected);
 }

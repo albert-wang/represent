@@ -209,7 +209,7 @@ namespace Represent
 				result.push(Token(TOKEN_RAW, *begin));
 
 				++begin;
-				while(charIn(*begin, LEGAL_IDENTIFIER_REST))
+				while(charIn(*begin, LEGAL_IDENTIFIER_REST) && begin != end)
 				{
 					result.push(Token(TOKEN_RAW, *begin));
 					++begin;
@@ -249,6 +249,16 @@ namespace Represent
 			RESTART(begin, start, flags, stream);
 			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, function(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			//Identifier?
+			RESTART(begin, start, flags, stream);
+			MAYBE(begin, flags, unaryOperator(begin, end, stream));
+			EXPECT(begin, flags, identifier(begin, end, stream));
 			if (success(flags))
 			{
 				out.push(stream);
@@ -301,7 +311,10 @@ namespace Represent
 		if (begin + consumed != end)
 		{
 			//Failure to parse entire input - return empty.
+			/*
+			std::cout << "INPUT: " << data << "\n";
 			std::cout << "Failed to parse entire output array, ended: " << consumed << " chars at " << std::string(begin + consumed, end) << "\n";
+			*/
 			return TokenStream();
 		}
 

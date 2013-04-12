@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <boost/utility.hpp>
 
 #include "evalutils.hpp"
 
@@ -37,18 +38,104 @@ namespace Represent
 					return 0;
 			}
 		}
-	}
 
+		bool typeCheck(const EvaluationContext::StorageCell& first, const EvaluationContext::StorageCell& second)
+		{
+			if (first.which() == second.which())
+			{
+				return true;
+			}
+
+			if (boost::get<Null>(&first))
+			{
+				return true;
+			}
+
+			return false;
+		}
+	}
 
 	EvaluationContext::EvaluationContext(const std::string& value)
 	{
 		TokenStream raw = parse(value);
 
 		//Run a simplification pass on the raw token stream, converting numbers into TOKEN_STACK_REFERENCEs.
-		stream = simplify(raw, storage);
+		stream = simplify(raw, storage, identifiers);
 	}
 
-	EvaluationContext::StorageCell EvaluationContext::evaluate() const
+	void EvaluationContext::dumpState()
+	{
+		std::cout << "Storage ====================\n";
+		for (size_t i = 0; i < storage.size(); ++i)
+		{
+			std::cout << i << "\t";
+			boost::apply_visitor(OutputCell(), storage[i]);
+			std::cout << "\n";
+		}
+
+		std::cout << "Identifiers ================\n";
+		for (auto it = identifiers.begin(); it != identifiers.end(); ++it)
+		{
+			std::cout << it->first << " -> " << it->second << "\n";
+		}
+
+		std::cout << "Simplified =================\n";
+		for (auto it = stream.begin(); it != stream.end(); ++it)
+		{
+			std::cout << *it << "\n";
+		}
+
+		std::cout << "RPN ========================\n";
+		TokenStream rpn = shuntingYard(stream);
+		for (auto it = rpn.begin(); it != rpn.end(); ++it)
+		{
+			std::cout << *it << "\n";
+		}
+	}
+
+	void EvaluationContext::define(const std::string& name, const EvaluationContext::StorageCell& cell)
+	{
+		auto it = identifiers.find(name);
+		if (it == identifiers.end())
+		{
+			boost::uint32_t index = storage.size();
+			storage.push_back(cell);
+
+			identifiers[name] = index;
+		} else {
+			if (typeCheck(storage.at(it->second), cell))
+			{
+				storage.at(it->second) = cell;
+			} 
+			else
+			{
+				std::cout << "Could not define: " << name << " due to a type error.\n";
+				std::cout << cell.which() << " incompatible with " << storage.at(it->second).which() << "\n";
+			}
+		}
+	}
+
+	EvaluationContext::StorageCell& EvaluationContext::lookup(StorageCell& cell)
+	{
+		Identifier * tryIdent = boost::get<Identifier>(&cell);
+		if (tryIdent)
+		{
+			auto it = identifiers.find(tryIdent->name);
+			if (it == identifiers.end())
+			{
+				//ERROR.
+				throw 42;
+			}
+
+			return lookup(storage.at(it->second));
+		}
+		else
+		{
+			return cell;
+		}
+	}
+
+	EvaluationContext::StorageCell EvaluationContext::evaluate()
 	{
 		//Convert to an RPN representation.
 		TokenStream rpn = shuntingYard(stream);
@@ -66,7 +153,7 @@ namespace Represent
 				{
 					case TOKEN_OPERATOR:
 					{
-						evaluateOperator(it->value, stack);
+						evaluateOperator(it->value, stack, *this);
 						break;
 					}
 					default:
@@ -153,29 +240,60 @@ namespace Represent
 	}
 
 
-	TokenStream simplify(const TokenStream& stream, std::vector<EvaluationContext::StorageCell>& storage)
+	TokenStream simplify(const TokenStream& stream, std::vector<EvaluationContext::StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers)
 	{
 		TokenStream result;
 
 		for (auto it = stream.begin(); it != stream.end();)
 		{
-			//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
-			//which represents a number. Convert it, and push a TOKEN_STACK_REFERENCE instead.
-			while (it->type != TOKEN_BASE_FLAG) 
+			
+			while (it->type != TOKEN_BASE_FLAG
+				&& it->type != TOKEN_FUNCTION_IDENTIFIER
+				&& it->type != TOKEN_IDENTIFIER_RAW
+				) 
 			{
 				result.push(*it);
 				++it;
 			}
 
+			//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
+			//which represents a number. Convert it, and push a TOKEN_STACK_REFERENCE instead.
+			if (it->type == TOKEN_BASE_FLAG)
+			{
+				boost::uint32_t index = storage.size();
+
+				Value value; 
+				it = convert(it, stream.end(), value);
+				storage.push_back(value);
+				result.push(Token(TOKEN_STACK_REFERENCE, index));
+			}
+
+			else if (it->type == TOKEN_FUNCTION_IDENTIFIER)
+			{
+				//Skip this token, dosn't really tell us anyhting.
+				++it;
+			}
 			//Similarly, for a TOKEN_IDENTIFIER_RAW, what follows is a series of characters.
 			//Convert to a string, and push it as a TOKEN_STACK_REFERENCE 
+			else if (it->type == TOKEN_IDENTIFIER_RAW)
+			{
+				Identifier ident;
+				it = convertIdentifier(it, stream.end(), ident.name);
 
-			boost::uint32_t index = storage.size();
+				auto lookup = identifiers.find(ident.name);
+				if (lookup == identifiers.end())
+				{
+					//Allocate a storage cell for the identifier. 
+					boost::uint32_t idIndex = storage.size();
+					storage.push_back(Null());
 
-			Value value; 
-			it = convert(it, stream.end(), value);
-			storage.push_back(value);
-			result.push(Token(TOKEN_STACK_REFERENCE, index));
+					identifiers[ident.name] = idIndex;
+				} 
+
+				boost::uint32_t index = storage.size();
+				storage.push_back(ident);
+				result.push(Token(TOKEN_STACK_REFERENCE, index));
+			}
 		}
 
 		return result;

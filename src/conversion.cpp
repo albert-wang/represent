@@ -12,7 +12,7 @@ namespace Represent
 		return result;
 	}
 
-	TokenStream::const_iterator convert(const TokenStream::const_iterator begin, const TokenStream::const_iterator end, Value& out)
+	TokenStream::const_iterator convert(TokenStream::const_iterator begin, TokenStream::const_iterator end, Value& out)
 	{
 		Token first = *begin;
 		auto it = begin; 
@@ -47,5 +47,21 @@ namespace Represent
 
 		out = result;
 		return it;
+	}
+
+	TokenStream::const_iterator convertIdentifier(TokenStream::const_iterator begin, TokenStream::const_iterator end, std::string& out)
+	{
+		++begin;
+
+		out.clear();
+		out.reserve(16);
+
+		while (begin->type == TOKEN_RAW && begin != end)
+		{
+			out.push_back(static_cast<char>(begin->value));
+			++begin;
+		}
+
+		return begin;
 	}
 }

@@ -30,3 +30,27 @@ BOOST_AUTO_TEST_CASE(unary_minus)
 	auto result = Represent::evaluateAs<Represent::Value>("-42");
 	BOOST_CHECK_EQUAL(result, Represent::Value("-42"));
 }
+
+BOOST_AUTO_TEST_CASE(identifier_add)
+{
+	Represent::EvaluationContext ctx("four + 4");
+	ctx.define("four", Represent::Value(4));
+
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(8));
+}
+
+BOOST_AUTO_TEST_CASE(identifier_add_2)
+{
+	Represent::EvaluationContext ctx("4 + four");
+	ctx.define("four", Represent::Value(4));
+
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(8));
+}
+
+BOOST_AUTO_TEST_CASE(only_identifiers)
+{
+	Represent::EvaluationContext ctx("four + four");
+	ctx.define("four", Represent::Value(4));
+
+	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(8));	
+}
