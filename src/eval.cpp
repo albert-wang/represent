@@ -19,6 +19,10 @@ namespace Represent
 				case OPERATOR_MINUS: 
 					return 10;
 
+				case OPERATOR_DIVIDE:
+				case OPERATOR_MULTIPLY:
+					return 20;
+
 				case OPERATOR_UNARY_PLUS:
 				case OPERATOR_UNARY_MINUS: 
 					return 90;
@@ -55,8 +59,8 @@ namespace Represent
 		}
 	}
 
-	Function::Function(Function::StackFunction f)
-		:function(f)
+	Function::Function(IFunctionImpl& impl)
+		:backing(&impl)
 	{}
 
 	EvaluationContext::EvaluationContext(const std::string& value)
@@ -109,11 +113,26 @@ namespace Represent
 			boost::uint32_t index = storage.size();
 			storage.push_back(cell);
 
+			//Hack to set the function name.
+			Function * maybe = boost::get<Function>(&storage.back());
+			if (maybe)
+			{
+				maybe->name = name;
+			}
+
 			identifiers[name] = index;
+
 		} else {
 			if (typeCheck(storage.at(it->second), cell))
 			{
 				storage.at(it->second) = cell;
+
+				//Hack to set the function name.
+				Function * maybe = boost::get<Function>(&storage.at(it->second));
+				if (maybe)
+				{
+					maybe->name = name;
+				}
 			} 
 			else
 			{
@@ -147,48 +166,7 @@ namespace Represent
 	{
 		//Convert to an RPN representation.
 		TokenStream rpn = shuntingYard(stream);
-
-		//Setup predefined functions.
-		std::vector<StorageCell> stack;
-
-		auto it = rpn.begin();
-		while (it != rpn.end())
-		{
-			if (it->type != TOKEN_STACK_REFERENCE)
-			{
-				//Evaluate.
-				switch(it->type)
-				{
-					case TOKEN_OPERATOR:
-					{
-						evaluateOperator(it->value, stack, *this);
-						break;
-					}
-					case TOKEN_FUNCTION_IDENTIFIER:
-					{
-						Function * target = boost::get<Function>(&lookup(storage.at(it->value)));
-						if (target->function)
-						{
-							target->function(target, stack, *this);
-						}
-						break;
-					}
-					default:
-					{
-						std::cout << "Unrecognized token type: " << *it << "\n";
-					}
-				}
-			}
-			else
-			{
-				stack.push_back(storage.at(it->value));
-			}
-
-			++it;
-		}
-
-		assert(stack.size() == 1);
-		return stack.back();
+		return evaluateWith<Value>(rpn);
 	}
 
 	StorageCell evaluate(const std::string& val)
@@ -208,7 +186,7 @@ namespace Represent
 		{
 			switch(it->type)
 			{
-				case TOKEN_STACK_REFERENCE:
+				case TOKEN_STORAGE_REFERENCE:
 				{
 					rpn.push(*it);
 					break;
@@ -232,6 +210,11 @@ namespace Represent
 						{
 							operatorStack.pop_back();
 							rpn.push(top);
+						}
+						else
+						{
+							//Not weaker, so push it onto the stack.
+							break;
 						}
 					}
 
@@ -351,12 +334,16 @@ namespace Represent
 	{
 		TokenStream result;
 
+		//Used to minimize identifiers.
+		boost::unordered_map<std::string, boost::uint32_t> identifierStorages;
+
 		for (auto it = stream.begin(); it != stream.end();)
 		{
-			while (it->type != TOKEN_BASE_FLAG
+			while (it != stream.end() 
+				&& it->type != TOKEN_BASE_FLAG
 				&& it->type != TOKEN_FUNCTION_IDENTIFIER
 				&& it->type != TOKEN_IDENTIFIER_RAW
-				&& it != stream.end()
+				&& it->type != TOKEN_STRING_START
 				) 
 			{
 				result.push(*it);
@@ -369,7 +356,7 @@ namespace Represent
 			}
 
 			//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
-			//which represents a number. Convert it, and push a TOKEN_STACK_REFERENCE instead.
+			//which represents a number. Convert it, and push a TOKEN_STORAGE_REFERENCE instead.
 			if (it->type == TOKEN_BASE_FLAG)
 			{
 				boost::uint32_t index = storage.size();
@@ -377,7 +364,7 @@ namespace Represent
 				Value value; 
 				it = convert(it, stream.end(), value);
 				storage.push_back(value);
-				result.push(Token(TOKEN_STACK_REFERENCE, index));
+				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
 			}
 			else if (it->type == TOKEN_FUNCTION_IDENTIFIER)
 			{
@@ -394,12 +381,22 @@ namespace Represent
 					identifiers[ident.name] = idIndex;
 				} 
 
-				boost::uint32_t index = storage.size();
-				storage.push_back(ident);
-				result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index));
+				auto identLookup = identifierStorages.find(ident.name);
+				if (identLookup == identifierStorages.end())
+				{
+					boost::uint32_t index = storage.size();
+					storage.push_back(ident);
+
+					identifierStorages[ident.name] = index;
+					result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index));
+				}
+				else 
+				{
+					result.push(Token(TOKEN_FUNCTION_IDENTIFIER, identLookup->second));
+				}
 			}
 			//Similarly, for a TOKEN_IDENTIFIER_RAW, what follows is a series of characters.
-			//Convert to a string, and push it as a TOKEN_STACK_REFERENCE 
+			//Convert to a string, and push it as a TOKEN_STORAGE_REFERENCE 
 			else if (it->type == TOKEN_IDENTIFIER_RAW)
 			{
 				Identifier ident;
@@ -415,9 +412,30 @@ namespace Represent
 					identifiers[ident.name] = idIndex;
 				} 
 
+				auto identLookup = identifierStorages.find(ident.name);
+				if (identLookup == identifierStorages.end())
+				{
+					boost::uint32_t index = storage.size();
+					storage.push_back(ident);
+
+					identifierStorages[ident.name] = index;
+					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+				} 
+				else
+				{
+					result.push(Token(TOKEN_STORAGE_REFERENCE, identLookup->second));
+				}
+			}
+			else if (it->type == TOKEN_STRING_START)
+			{
+				//Convert the iterator length into a string.
+				std::string str;
+				it = convertString(it, stream.end(), str);
+
 				boost::uint32_t index = storage.size();
-				storage.push_back(ident);
-				result.push(Token(TOKEN_STACK_REFERENCE, index));
+				storage.push_back(str);
+
+				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
 			}
 		}
 

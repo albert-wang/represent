@@ -96,6 +96,14 @@ BOOST_AUTO_TEST_CASE(convert_decimal)
 	BOOST_CHECK_EQUAL(v, Value("21568901345089126350"));
 }
 
+BOOST_AUTO_TEST_CASE(convert_small)
+{
+	TokenStream tokens = Represent::parse("0.000000001");
+	Value v = Represent::convert(tokens);
+
+	BOOST_CHECK_EQUAL(v, Value("0.000000001"));
+}
+
 BOOST_AUTO_TEST_CASE(parse_simple_expression)
 {
 	TokenStream tokens = Represent::parse("42 + 5");
@@ -189,6 +197,17 @@ BOOST_AUTO_TEST_CASE(parse_identifier_2)
 		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4,
 		TOKEN_OPERATOR, OPERATOR_PLUS, 
 		TOKEN_IDENTIFIER_RAW, 0, TOKEN_RAW, 'p', TOKEN_RAW, 'i', 
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_string)
+{
+	TokenStream tokens = Represent::parse("`4 + 4`"); 
+	boost::uint32_t expected[] = {
+		TOKEN_STRING_START, 0, 
+		TOKEN_RAW, '4', TOKEN_RAW, ' ', TOKEN_RAW, '+', TOKEN_RAW, ' ', TOKEN_RAW, '4'
 	};
 
 	AUTO_COMPARE(tokens, expected);

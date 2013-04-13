@@ -2,6 +2,7 @@
 #include <boost/cstdint.hpp>
 
 #include "eval.hpp"
+#include "function.hpp"
 
 BOOST_AUTO_TEST_CASE(simple_add)
 {
@@ -59,28 +60,19 @@ namespace
 {
 	using namespace Represent;
 
-	//A few test functions.
-	void incr(Function *, std::vector<StorageCell>& stack, EvaluationContext& ctx)
-	{
-		Value a = boost::get<Value>(ctx.lookup(stack.back()));
-		stack.pop_back();
-
-		stack.push_back(a + 1);
-	}
+	GenericFunction<Increment> incr;
+	GenericFunction<Strlen> stringlength;
 }
-
 /*
 ctx(
 	"add = defun { pop pop + push }"
 	"add(increment(3), increment(4) + 4)"
 	=> 13 
-*/
-
+	*/
 BOOST_AUTO_TEST_CASE(test_function_call)
 {
 	Represent::EvaluationContext ctx("increment(4)");
 	ctx.define("increment", Function(incr));
-
 
 	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(5));
 }
@@ -105,6 +97,33 @@ BOOST_AUTO_TEST_CASE(expression_with_function)
 	Represent::EvaluationContext ctx("-increment(-increment(4))");
 	ctx.define("increment", Function(incr));
 
-	ctx.dumpState();
 	BOOST_CHECK_EQUAL(ctx.evaluateAs<Represent::Value>(), Represent::Value(4));
+}
+
+BOOST_AUTO_TEST_CASE(expresion_eval_with)
+{
+	//There is some inaccuracy here when evaluating with a float.
+	Represent::EvaluationContext ctx("1 / 10");
+
+	Represent::Value a = ctx.evaluateAsWith<Represent::Value, Represent::Value>();
+	Represent::Value b = ctx.evaluateAsWith<Represent::Value, float>();
+	BOOST_CHECK(a != b);
+}
+
+BOOST_AUTO_TEST_CASE(strlen_works)
+{
+	Represent::EvaluationContext ctx("strlen(`abc`)");
+	ctx.define("strlen", Function(stringlength));
+
+	Represent::Value a = ctx.evaluateAs<Represent::Value>();
+	BOOST_CHECK_EQUAL(a, Represent::Value(3));
+}
+
+BOOST_AUTO_TEST_CASE(eval_simple_expressio)
+{
+	Represent::EvaluationContext ctx("42 + -41 / 4 - 3");
+	Represent::Value a = ctx.evaluateAs<Represent::Value>();
+
+	ctx.dumpState();
+	BOOST_CHECK_EQUAL(a, Value("28.75"));
 }

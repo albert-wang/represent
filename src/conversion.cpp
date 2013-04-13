@@ -21,7 +21,7 @@ namespace Represent
 		Value base(first.value);
 		Value result(0);
 
-		while (it->type == TOKEN_NUMBER && it != end)
+		while (it != end && it->type == TOKEN_NUMBER)
 		{
 			result *= base;
 			result += it->value;
@@ -31,16 +31,17 @@ namespace Represent
 		if (it != end && it->type == TOKEN_DECIMAL_POINT) 
 		{
 			//Decimal values.
+			Value base(first.value);
 			Value currentBase(first.value);
 
 			++it;
-			while (it->type == TOKEN_NUMBER && it != end)
+			while (it != end && it->type == TOKEN_NUMBER)
 			{
 				Value v(it->value);
 				v /= currentBase;
 
 				result += v;
-				currentBase *= currentBase;
+				currentBase *= base;
 				++it;
 			}
 		}
@@ -56,12 +57,17 @@ namespace Represent
 		out.clear();
 		out.reserve(16);
 
-		while (begin->type == TOKEN_RAW && begin != end)
+		while (begin != end && begin->type == TOKEN_RAW)
 		{
 			out.push_back(static_cast<char>(begin->value));
 			++begin;
 		}
 
 		return begin;
+	}
+
+	TokenStream::const_iterator convertString(TokenStream::const_iterator begin, TokenStream::const_iterator end, std::string& out)
+	{
+		return convertIdentifier(begin, end, out);
 	}
 }

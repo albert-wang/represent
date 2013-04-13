@@ -229,6 +229,44 @@ namespace Represent
 			return 0;
 		}
 
+		size_t string(const char * begin, const char * end, TokenStream& out)
+		{
+			const char * start = begin;
+			boost::uint32_t flags = 0;
+			TokenStream stream;
+
+			RESTART(begin, start, flags, stream);
+			EXPECT(begin, flags, parseChar(begin, end, '`', TOKEN_STRING_START, 0, stream));
+			if (!success(flags))
+			{
+				return 0;
+			}
+
+			while (begin != end)
+			{
+				if (*begin == '`')
+				{
+					if (*(begin - 1) != '\\')
+					{
+						//Consume the end `.
+						++begin;
+						break;
+					}
+				}
+
+				stream.push(Token(TOKEN_RAW, *begin));
+				++begin;
+			}
+
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			return 0;
+		}
+
 		size_t value(const char * begin, const char * end, TokenStream& out)
 		{
 			const char * start = begin;
@@ -249,6 +287,15 @@ namespace Represent
 			RESTART(begin, start, flags, stream);
 			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, function(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			//String?
+			RESTART(begin, start, flags, stream);
+			EXPECT(begin, flags, string(begin, end, stream));
 			if (success(flags))
 			{
 				out.push(stream);
@@ -296,7 +343,29 @@ namespace Represent
 	{
 		std::vector<char> buffer; 
 		std::copy(data.begin(), data.end(), std::back_inserter(buffer));
-		buffer.erase(std::remove_if(buffer.begin(), buffer.end(), isspace), buffer.end());
+		
+		bool inString = false;
+		for (size_t i = 0; i < buffer.size(); ++i)
+		{
+			if (buffer[i] == '`')
+			{
+				//Escaped backtick.
+				if (i > 0 && inString && buffer[i - 1] == '\\')
+				{
+					continue;
+				}
+
+				inString = !inString;
+				continue;
+			}
+
+			if (isspace(buffer[i]) && !inString)
+			{
+				buffer[i] = 0;
+			}
+		}
+
+		buffer.erase(std::remove(buffer.begin(), buffer.end(), 0), buffer.end());
 
 		TokenStream result;
 		if (buffer.size() == 0)
