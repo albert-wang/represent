@@ -345,6 +345,8 @@ namespace Represent
 				&& it->type != TOKEN_IDENTIFIER_RAW
 				&& it->type != TOKEN_STRING_START
 				&& it->type != TOKEN_VECTOR
+				&& it->type != TOKEN_QUATERNION 
+				&& it->type != TOKEN_MATRIX
 				) 
 			{
 				result.push(*it);
@@ -453,6 +455,52 @@ namespace Represent
 
 				boost::uint32_t index = storage.size();
 				storage.push_back(vec);
+
+				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+			}
+			else if (it->type == TOKEN_QUATERNION)
+			{
+				Math::Quaternion<Value> quat;
+				//Advance to the first number, skipping TOKEN_QUATERNION and TOKEN_VECTOR.
+				it = convert(boost::next(it, 2), stream.end(), quat.w);
+				it = convert(boost::next(it, 1), stream.end(), quat.x);
+				it = convert(boost::next(it, 1), stream.end(), quat.y);
+				it = convert(boost::next(it, 1), stream.end(), quat.z);
+
+				//Consume the final TOKEN_VECTOR 
+				++it;
+
+				boost::uint32_t index = storage.size();
+				storage.push_back(quat);
+
+				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+			}
+			else if (it->type == TOKEN_MATRIX)
+			{
+				Math::Matrix4<Value> mat;
+
+				it = convert(boost::next(it, 2), stream.end(), mat(0, 0));
+				it = convert(boost::next(it, 1), stream.end(), mat(0, 1));
+				it = convert(boost::next(it, 1), stream.end(), mat(0, 2));
+				it = convert(boost::next(it, 1), stream.end(), mat(0, 3));
+
+				it = convert(boost::next(it, 2), stream.end(), mat(1, 0));
+				it = convert(boost::next(it, 1), stream.end(), mat(1, 1));
+				it = convert(boost::next(it, 1), stream.end(), mat(1, 2));
+				it = convert(boost::next(it, 1), stream.end(), mat(1, 3));
+
+				it = convert(boost::next(it, 2), stream.end(), mat(2, 0));
+				it = convert(boost::next(it, 1), stream.end(), mat(2, 1));
+				it = convert(boost::next(it, 1), stream.end(), mat(2, 2));
+				it = convert(boost::next(it, 1), stream.end(), mat(2, 3));
+
+				it = convert(boost::next(it, 2), stream.end(), mat(3, 0));
+				it = convert(boost::next(it, 1), stream.end(), mat(3, 1));
+				it = convert(boost::next(it, 1), stream.end(), mat(3, 2));
+				it = convert(boost::next(it, 1), stream.end(), mat(3, 3));
+
+				boost::uint32_t index = storage.size();
+				storage.push_back(mat);
 
 				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
 			}

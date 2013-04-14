@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(parse_escaped_string_2)
 
 BOOST_AUTO_TEST_CASE(parse_vector)
 {
-	TokenStream tokens = Represent::parse("[1; 2; 3; 4]");
+	TokenStream tokens = Represent::parse("[1, 2, 3, 4]");
 	boost::uint32_t expected[] = {
 		TOKEN_VECTOR, 0, 
 		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1, 

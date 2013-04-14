@@ -42,10 +42,10 @@ class Matrix4;
 	return *this
 
 #define VECTOR_MATH_SCALAR_IMPL(other, op) \
-	elements[0] op other;										\
-	elements[1] op other;										\
-	if (len >= 3) elements[2] op other;					\
-	if (len == 4) elements[3] op other;					\
+	elements[0] op other;											\
+	elements[1] op other;											\
+	if (len >= 3) elements[2] op other;								\
+	if (len == 4) elements[3] op other;								\
 	return *this
 
 namespace Math

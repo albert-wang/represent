@@ -298,13 +298,56 @@ namespace Represent
 			RESTART(begin, start, flags, stream);
 			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_VECTOR, 0, stream));
 			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_VECTOR_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_VECTOR_DELIMIT, 0, stream));
 			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_VECTOR_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_VECTOR_DELIMIT, 0, stream));
 			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_VECTOR_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_VECTOR_DELIMIT, 0, stream));
 			EXPECT(begin, flags, parseNumber(begin, end, stream));
 			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_VECTOR, 1, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			return 0;
+		}
+
+		size_t quaternion(const char * begin, const char * end, TokenStream& out)
+		{
+			const char * start = begin;
+			boost::uint32_t flags = 0;
+			TokenStream stream;
+
+			RESTART(begin, start, flags, stream);
+			EXPECT(begin, flags, parseChar(begin, end, 'q', TOKEN_QUATERNION, 0, stream)); 
+			EXPECT(begin, flags, vector(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			return 0;
+		}
+
+		size_t matrix(const char * begin, const char * end, TokenStream& out)
+		{
+			const char * start = begin;
+			boost::uint32_t flags = 0;
+			TokenStream stream;
+
+			RESTART(begin, start, flags, stream);
+			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_MATRIX, 0, stream));
+			EXPECT(begin, flags, vector(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_MATRIX_DELIMIT, 0, stream));
+			EXPECT(begin, flags, vector(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_MATRIX_DELIMIT, 0, stream));
+			EXPECT(begin, flags, vector(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_MATRIX_DELIMIT, 0, stream));
+			EXPECT(begin, flags, vector(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_MATRIX, 1, stream));
 			if (success(flags))
 			{
 				out.push(stream);
@@ -359,6 +402,25 @@ namespace Represent
 				return begin - start;
 			}
 
+			//Quat?
+			RESTART(begin, start, flags, stream);
+			MAYBE(begin, flags, unaryOperator(begin, end, stream));
+			EXPECT(begin, flags, quaternion(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			RESTART(begin, start, flags, stream);
+			MAYBE(begin, flags, unaryOperator(begin, end, stream));
+			EXPECT(begin, flags, matrix(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
 			//Identifier?
 			RESTART(begin, start, flags, stream);
 			MAYBE(begin, flags, unaryOperator(begin, end, stream));
@@ -378,19 +440,25 @@ namespace Represent
 			boost::uint32_t parsingFlags = 0;
 			TokenStream stream;
 
-	#define FINISH() if (success(parsingFlags)) { out.push(stream); return begin - start; }
-
 			//number >> op >> expression
 			RESTART(begin, start, parsingFlags, stream);
 			EXPECT(begin, parsingFlags, value(begin, end, stream));
 			EXPECT(begin, parsingFlags, binaryOperator(begin, end, stream));
 			EXPECT(begin, parsingFlags, expression(begin, end, stream));
-			FINISH();
+			if (success(parsingFlags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
 
 			//Try a single value.
 			RESTART(begin, start, parsingFlags, stream);
 			EXPECT(begin, parsingFlags, value(begin, end, stream));
-			FINISH();
+			if (success(parsingFlags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
 
 			return 0;
 		}
@@ -447,9 +515,8 @@ namespace Represent
 		/*
 		expression = (unary_operator?) >> value | variable | function [ >> binary_operator >> unary_operator? >> expression ]
 
-		value = vector | matrix | quaternion | integer | decimal | hex | octal | constant | string
+		value = vector | matrix | quaternion | number | identifier | guid | string
 		operator = ...
-		variable = ....
 		function = identifier '(' [expression {',' expression}] ')' 
 
 

@@ -37,8 +37,8 @@ point values.
 	e              | A high precision representation of e
 	[v;v;v;v]      | Matrix. Each vector must have the same size. Row-major. May omit the []s for the vectors.
 	ident()        | Identity matrix
-	{guid}         | A 128-bit GUID. No expressions may be done on this value.
-	`string`       | A string. No expressions may be done on this value. Valid escape characters are \`.
+	{guid}         | A 128-bit GUID. The character '-' is ignored here. Hex only.
+	`string`       | A string. Valid escape characters are \`.wrq1w1
 
 Allowed operators are:
 	

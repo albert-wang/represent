@@ -18,5 +18,7 @@ namespace Represent
 		size_t identifier(const char * begin, const char * end, TokenStream& out);
 		size_t string(const char * begin, const char * end, TokenStream& out);
 		size_t vector(const char * begin, const char * end, TokenStream& out);
+		size_t quaternion(const char * begin, const char * end, TokenStream& out);
+		size_t matrix(const char * begin, const char * end, TokenStream& out);
 	}
 }

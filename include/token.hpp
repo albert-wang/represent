@@ -8,6 +8,10 @@
 
 namespace Represent
 {
+	/*
+		TOKEN_QUATERNION modifies a TOKEN_VECTOR.
+		TOKEN_MATRIX modifies the immediately following 4 TOKEN_VECTORs.
+	*/
 #define TOKEN_SOURCE 		\
 	(TOKEN_BASE_FLAG)       \
 	(TOKEN_NUMBER)	 		\
@@ -21,8 +25,10 @@ namespace Represent
 	(TOKEN_STRING_START)	\
 	(TOKEN_VECTOR)			\
 	(TOKEN_VECTOR_DELIMIT)  \
+	(TOKEN_QUATERNION)		\
+	(TOKEN_MATRIX)			\
+	(TOKEN_MATRIX_DELIMIT)	\
 	(TOKEN_STORAGE_REFERENCE)
-
 
 	MAKE_FULL_ENUM(TokenType, 0, TOKEN_SOURCE);
 

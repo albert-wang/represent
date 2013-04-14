@@ -2,6 +2,8 @@
 #include <boost/unordered_map.hpp>
 
 #include "vector.h"
+#include "quaternion.h"
+#include "matrix.h"
 #include "conversion.hpp"
 #include "parser.hpp"
 
@@ -42,7 +44,7 @@ namespace Represent
 	template<typename T>
 	struct Storage
 	{
-		typedef boost::variant<T, Math::Vector<T, 4>, std::string, Function, Identifier, Null> type;
+		typedef boost::variant<T, Math::Vector<T, 4>, Math::Quaternion<T>, Math::Matrix4<T>, std::string, Function, Identifier, Null> type;
 	};
 
 	typedef Storage<Value>::type StorageCell;
@@ -92,6 +94,38 @@ namespace Represent
 
 				*result = t;
 			}
+
+			void operator()(const Math::Quaternion<Value>& v)
+			{
+				Math::Quaternion<Backing> t;
+
+				t.w = v.w.template convert_to<Backing>();
+				t.x = v.x.template convert_to<Backing>();
+				t.y = v.y.template convert_to<Backing>();
+				t.z = v.z.template convert_to<Backing>();
+
+				*result = t;
+			}
+
+			template<typename U>
+			void operator()(const Math::Quaternion<U>& v)
+			{
+				Math::Quaternion<Backing> t;
+
+				t.w = v.w;
+				t.x = v.x;
+				t.y = v.y;
+				t.z = v.z;
+
+				*result = t;
+			}
+
+			void operator()(const Math::Matrix4<Value>& v)
+			{}
+
+			template<typename U>
+			void operator()(const Math::Matrix4<U>& v)
+			{}
 
 			Cell * result;
 		};

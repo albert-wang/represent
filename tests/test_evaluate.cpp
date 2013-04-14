@@ -64,6 +64,8 @@ namespace
 	GenericFunction<Strlen> stringlength;
 
 	typedef Math::Vector<Value, 4> Vector4V;
+	typedef Math::Quaternion<Value> QuaternionV;
+	typedef Math::Matrix4<Value> Matrix4V;
 }
 /*
 ctx(
@@ -131,9 +133,18 @@ BOOST_AUTO_TEST_CASE(eval_simple_expression)
 
 BOOST_AUTO_TEST_CASE(eval_simple_vector)
 {
-	Represent::EvaluationContext ctx("[1; 2; 3; 4]");
+	Represent::EvaluationContext ctx("[1, 2, 3, 4]");
 	Vector4V a = ctx.evaluateAs<Vector4V>();
 
-	ctx.dumpState();
 	BOOST_CHECK_EQUAL(a, Vector4V(1, 2, 3, 4));
+}
+
+BOOST_AUTO_TEST_CASE(eval_simple_quat)
+{
+	Represent::EvaluationContext ctx("q[1, 2, 3, 4]");
+	ctx.dumpState();
+	QuaternionV a = ctx.evaluateAs<QuaternionV>();
+
+	ctx.dumpState();
+	//BOOST_CHECK_EQUAL(a, 
 }
