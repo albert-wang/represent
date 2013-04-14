@@ -62,6 +62,8 @@ namespace
 
 	GenericFunction<Increment> incr;
 	GenericFunction<Strlen> stringlength;
+
+	typedef Math::Vector<Value, 4> Vector4V;
 }
 /*
 ctx(
@@ -119,11 +121,19 @@ BOOST_AUTO_TEST_CASE(strlen_works)
 	BOOST_CHECK_EQUAL(a, Represent::Value(3));
 }
 
-BOOST_AUTO_TEST_CASE(eval_simple_expressio)
+BOOST_AUTO_TEST_CASE(eval_simple_expression)
 {
 	Represent::EvaluationContext ctx("42 + -41 / 4 - 3");
 	Represent::Value a = ctx.evaluateAs<Represent::Value>();
 
-	ctx.dumpState();
 	BOOST_CHECK_EQUAL(a, Value("28.75"));
+}
+
+BOOST_AUTO_TEST_CASE(eval_simple_vector)
+{
+	Represent::EvaluationContext ctx("[1; 2; 3; 4]");
+	Vector4V a = ctx.evaluateAs<Vector4V>();
+
+	ctx.dumpState();
+	BOOST_CHECK_EQUAL(a, Vector4V(1, 2, 3, 4));
 }

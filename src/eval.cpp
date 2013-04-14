@@ -344,6 +344,7 @@ namespace Represent
 				&& it->type != TOKEN_FUNCTION_IDENTIFIER
 				&& it->type != TOKEN_IDENTIFIER_RAW
 				&& it->type != TOKEN_STRING_START
+				&& it->type != TOKEN_VECTOR
 				) 
 			{
 				result.push(*it);
@@ -434,6 +435,24 @@ namespace Represent
 
 				boost::uint32_t index = storage.size();
 				storage.push_back(str);
+
+				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+			}
+			else if (it->type == TOKEN_VECTOR)
+			{
+				Math::Vector<Value, 4> vec;
+
+				//Advance to the first number.
+				it = convert(boost::next(it, 1), stream.end(), vec[0]);
+				it = convert(boost::next(it, 1), stream.end(), vec[1]);
+				it = convert(boost::next(it, 1), stream.end(), vec[2]);
+				it = convert(boost::next(it, 1), stream.end(), vec[3]);
+
+				//Consume the final TOKEN_VECTOR 
+				++it;
+
+				boost::uint32_t index = storage.size();
+				storage.push_back(vec);
 
 				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
 			}

@@ -17,5 +17,6 @@ namespace Represent
 		size_t binaryOperator(const char * begin, const char * end, TokenStream& out);
 		size_t identifier(const char * begin, const char * end, TokenStream& out);
 		size_t string(const char * begin, const char * end, TokenStream& out);
+		size_t vector(const char * begin, const char * end, TokenStream& out);
 	}
 }

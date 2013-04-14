@@ -212,3 +212,55 @@ BOOST_AUTO_TEST_CASE(parse_string)
 
 	AUTO_COMPARE(tokens, expected);
 }
+
+BOOST_AUTO_TEST_CASE(parse_empty_string)
+{
+	TokenStream tokens = Represent::parse("``");
+	boost::uint32_t expected[] = {
+		TOKEN_STRING_START, 0
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_escaped_string)
+{
+	TokenStream tokens = Represent::parse("`\\``");
+	boost::uint32_t expected[] = {
+		TOKEN_STRING_START, 0, 
+		TOKEN_RAW, '`'
+	};
+	
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_escaped_string_2)
+{
+	TokenStream tokens = Represent::parse("`\\\\ \\``");
+	boost::uint32_t expected[] = {
+		TOKEN_STRING_START, 0, 
+		TOKEN_RAW, '\\',
+		TOKEN_RAW, ' ',
+		TOKEN_RAW, '`'
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_vector)
+{
+	TokenStream tokens = Represent::parse("[1; 2; 3; 4]");
+	boost::uint32_t expected[] = {
+		TOKEN_VECTOR, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1, 
+		TOKEN_VECTOR_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 2, 
+		TOKEN_VECTOR_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 3, 
+		TOKEN_VECTOR_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, 
+		TOKEN_VECTOR, 1
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}

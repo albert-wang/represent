@@ -1,6 +1,7 @@
 #include <boost/variant.hpp>
 #include <boost/unordered_map.hpp>
 
+#include "vector.h"
 #include "conversion.hpp"
 #include "parser.hpp"
 
@@ -10,12 +11,21 @@ namespace Represent
 	class EvaluationContext;
 	struct Identifier;
 	struct Null;
-	struct Function;
+	struct IFunctionImpl;
 
-	//TODO: Vector4<Value>, Matrix4<Value>, Quaternion<Value>, GUID
-	typedef boost::variant<Value, std::string, Function, Identifier, Null> StorageCell;
-	typedef boost::variant<float, std::string, Function, Identifier, Null> StorageCellf;
-	typedef boost::variant<double, std::string, Function, Identifier, Null> StorageCelld;
+	struct Function
+	{
+		explicit Function(IFunctionImpl& impl);
+
+		template<typename T>
+		void invoke(std::vector<T>& stack, EvaluationContext& ctx)
+		{
+			backing->invoke(stack, ctx);
+		}
+
+		std::string name;
+		IFunctionImpl * backing;
+	};
 
 	//A string used to lookup in the identifier map.
 	struct Identifier
@@ -27,6 +37,17 @@ namespace Represent
 	//This is the only type that this is possible on.
 	struct Null
 	{};
+
+	//TODO: Vector4<Value>, Matrix4<Value>, Quaternion<Value>, GUID
+	template<typename T>
+	struct Storage
+	{
+		typedef boost::variant<T, Math::Vector<T, 4>, std::string, Function, Identifier, Null> type;
+	};
+
+	typedef Storage<Value>::type StorageCell;
+	typedef Storage<float>::type StorageCellf;
+	typedef Storage<double>::type StorageCelld;
 
 	template<typename Cell, typename Backing>
 	struct StorageConvert
@@ -44,10 +65,32 @@ namespace Represent
 				*result = u;
 			}
 
-			template<>
 			void operator()(const Value& v)
 			{
 				*result = v.template convert_to<Backing>();
+			}
+
+			void operator()(const Math::Vector<Value, 4>& v)
+			{
+				Math::Vector<Backing, 4> t;
+				t[0] = v[0].template convert_to<Backing>();
+				t[1] = v[1].template convert_to<Backing>();
+				t[2] = v[2].template convert_to<Backing>();
+				t[3] = v[3].template convert_to<Backing>();
+
+				*result = t;
+			}
+
+			template<typename U>
+			void operator()(const Math::Vector<U, 4>& v)
+			{
+				Math::Vector<Backing, 4> t;
+				t[0] = v[0];
+				t[1] = v[1];
+				t[2] = v[2];
+				t[3] = v[3];
+
+				*result = t;
 			}
 
 			Cell * result;
@@ -71,20 +114,6 @@ namespace Represent
 		virtual void invoke(std::vector<StorageCell>& stack, EvaluationContext& ctx) = 0;
 		virtual void invoke(std::vector<StorageCelld>& stack, EvaluationContext& ctx) = 0;
 		virtual void invoke(std::vector<StorageCellf>& stack, EvaluationContext& ctx) = 0;
-	};
-
-	struct Function
-	{
-		explicit Function(IFunctionImpl& impl);
-
-		template<typename T>
-		void invoke(std::vector<T>& stack, EvaluationContext& ctx)
-		{
-			backing->invoke(stack, ctx);
-		}
-
-		std::string name;
-		IFunctionImpl * backing;
 	};
 
 	class EvaluationContext
@@ -119,7 +148,7 @@ namespace Represent
 		template<typename T>
 		StorageCell evaluateWith(const TokenStream& rpn)
 		{
-			typedef boost::variant<T, std::string, Function, Identifier, Null> Cell;
+			typedef Storage<T>::type Cell;
 			std::vector<Cell> typedStorage;
 			typedStorage.reserve(storage.size());
 

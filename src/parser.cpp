@@ -242,22 +242,69 @@ namespace Represent
 				return 0;
 			}
 
+			bool escapeSequence = false;
 			while (begin != end)
 			{
-				if (*begin == '`')
+				if (escapeSequence)
 				{
-					if (*(begin - 1) != '\\')
+					if (*begin != '`' && *begin != '\\')
 					{
-						//Consume the end `.
+						//Invalid escape.
+						std::cout << "invalid escape sequence: \\" << *begin << "\n";
+						return 0;
+					}
+
+					escapeSequence = false;
+				} 
+				else
+				{
+					//Try beginning an escape sequence.
+					if (*begin == '\\')
+					{
+						escapeSequence = true;
+						++begin;
+						continue;
+					}
+
+					//End of the string?
+					if (*begin == '`')
+					{
+						//Consume the final ` without emitting a token.
 						++begin;
 						break;
 					}
 				}
 
+				//Push the token as a member of the string.
 				stream.push(Token(TOKEN_RAW, *begin));
 				++begin;
 			}
 
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			return 0;
+		}
+
+		size_t vector(const char * begin, const char * end, TokenStream& out)
+		{
+			const char * start = begin;
+			boost::uint32_t flags = 0;
+			TokenStream stream;
+
+			RESTART(begin, start, flags, stream);
+			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_VECTOR, 0, stream));
+			EXPECT(begin, flags, parseNumber(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_VECTOR_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseNumber(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_VECTOR_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseNumber(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_VECTOR_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseNumber(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_VECTOR, 1, stream));
 			if (success(flags))
 			{
 				out.push(stream);
@@ -296,6 +343,16 @@ namespace Represent
 			//String?
 			RESTART(begin, start, flags, stream);
 			EXPECT(begin, flags, string(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			//Vector?
+			RESTART(begin, start, flags, stream);
+			MAYBE(begin, flags, unaryOperator(begin, end, stream));
+			EXPECT(begin, flags, vector(begin, end, stream));
 			if (success(flags))
 			{
 				out.push(stream);
