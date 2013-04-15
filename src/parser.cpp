@@ -412,6 +412,7 @@ namespace Represent
 				return begin - start;
 			}
 
+			//Matrix?
 			RESTART(begin, start, flags, stream);
 			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, matrix(begin, end, stream));
