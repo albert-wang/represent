@@ -1,7 +1,7 @@
 #include <boost/variant.hpp>
 #include <boost/unordered_map.hpp>
 
-#include "vector.h"
+#include "vector2.h"
 #include "quaternion.h"
 #include "matrix.h"
 #include "conversion.hpp"
@@ -15,6 +15,13 @@ namespace Represent
 	struct Null;
 	struct IFunctionImpl;
 
+	//Forward decls.
+	template<typename T>
+	void invokeBacking(IFunctionImpl * backing, std::vector<T>& stack, EvaluationContext& ctx);
+
+	template<typename Value, typename Cell>
+	void evaluateOperator(boost::uint32_t op, std::vector<Cell>& stack, EvaluationContext& ctx);
+
 	struct Function
 	{
 		explicit Function(IFunctionImpl& impl);
@@ -22,7 +29,7 @@ namespace Represent
 		template<typename T>
 		void invoke(std::vector<T>& stack, EvaluationContext& ctx)
 		{
-			backing->invoke(stack, ctx);
+			invokeBacking(backing, stack, ctx);
 		}
 
 		std::string name;
@@ -44,7 +51,7 @@ namespace Represent
 	template<typename T>
 	struct Storage
 	{
-		typedef boost::variant<T, Math::Vector<T, 4>, Math::Quaternion<T>, Math::Matrix4<T>, std::string, Function, Identifier, Null> type;
+		typedef boost::variant<T, Math::Vector4<T>, Math::Quaternion<T>, Math::Matrix4<T>, std::string, Function, Identifier, Null> type;
 	};
 
 	typedef Storage<Value>::type StorageCell;
@@ -72,9 +79,9 @@ namespace Represent
 				*result = v.template convert_to<Backing>();
 			}
 
-			void operator()(const Math::Vector<Value, 4>& v)
+			void operator()(const Math::Vector4<Value>& v)
 			{
-				Math::Vector<Backing, 4> t;
+				Math::Vector4<Backing> t;
 				t[0] = v[0].template convert_to<Backing>();
 				t[1] = v[1].template convert_to<Backing>();
 				t[2] = v[2].template convert_to<Backing>();
@@ -84,9 +91,9 @@ namespace Represent
 			}
 
 			template<typename U>
-			void operator()(const Math::Vector<U, 4>& v)
+			void operator()(const Math::Vector4<U>& v)
 			{
-				Math::Vector<Backing, 4> t;
+				Math::Vector4<Backing> t;
 				t[0] = v[0];
 				t[1] = v[1];
 				t[2] = v[2];
@@ -150,6 +157,11 @@ namespace Represent
 		virtual void invoke(std::vector<StorageCellf>& stack, EvaluationContext& ctx) = 0;
 	};
 
+
+	//Some utility functions that evaluation context uses.
+	TokenStream simplify(const TokenStream& stream, std::vector<StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers);
+	TokenStream shuntingYard(const TokenStream& stream);
+
 	class EvaluationContext
 	{
 	public:
@@ -182,7 +194,7 @@ namespace Represent
 		template<typename T>
 		StorageCell evaluateWith(const TokenStream& rpn)
 		{
-			typedef Storage<T>::type Cell;
+			typedef typename Storage<T>::type Cell;
 			std::vector<Cell> typedStorage;
 			typedStorage.reserve(storage.size());
 
@@ -243,7 +255,9 @@ namespace Represent
 		return context.evaluateAs<T>();
 	}
 
-	//Some utility functions that evaluation context uses.
-	TokenStream simplify(const TokenStream& stream, std::vector<StorageCell>& storage, boost::unordered_map<std::string, boost::uint32_t>& identifiers);
-	TokenStream shuntingYard(const TokenStream& stream);
+	template<typename T>
+	void invokeBacking(IFunctionImpl * backing, std::vector<T>& stack, EvaluationContext& ctx)
+	{
+		backing->invoke(stack, ctx);
+	}
 }

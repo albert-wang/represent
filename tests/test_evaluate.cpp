@@ -63,7 +63,7 @@ namespace
 	GenericFunction<Increment> incr;
 	GenericFunction<Strlen> stringlength;
 
-	typedef Math::Vector<Value, 4> Vector4V;
+	typedef Math::Vector4<Value> Vector4V;
 	typedef Math::Quaternion<Value> QuaternionV;
 	typedef Math::Matrix4<Value> Matrix4V;
 }
@@ -123,6 +123,15 @@ BOOST_AUTO_TEST_CASE(strlen_works)
 	BOOST_CHECK_EQUAL(a, Represent::Value(3));
 }
 
+BOOST_AUTO_TEST_CASE(strlen_append)
+{
+	Represent::EvaluationContext ctx("strlen(`abc` + `123`)");
+	ctx.define("strlen", Function(stringlength));
+
+	Represent::Value a = ctx.evaluateAs<Represent::Value>();
+	BOOST_CHECK_EQUAL(a, Represent::Value(6));
+}
+
 BOOST_AUTO_TEST_CASE(eval_simple_expression)
 {
 	Represent::EvaluationContext ctx("42 + -41 / 4 - 3");
@@ -139,12 +148,23 @@ BOOST_AUTO_TEST_CASE(eval_simple_vector)
 	BOOST_CHECK_EQUAL(a, Vector4V(1, 2, 3, 4));
 }
 
+BOOST_AUTO_TEST_CASE(eval_vector_add)
+{
+	Represent::EvaluationContext ctx("[1, 2, 3, 4] + 4");
+	Vector4V a = ctx.evaluateAs<Vector4V>();
+
+	BOOST_CHECK_EQUAL(a, Vector4V(5, 6, 7, 8));
+}
+
+BOOST_AUTO_TEST_CASE(eval_vector_add_vector)
+{
+	Represent::EvaluationContext ctx("[1, 2, 3, 4] + [2, 3, 4, 5]");
+	Vector4V a = ctx.evaluateAs<Vector4V>();
+
+	BOOST_CHECK_EQUAL(a, Vector4V(3, 5, 7, 9));
+}
+
 BOOST_AUTO_TEST_CASE(eval_simple_quat)
 {
 	Represent::EvaluationContext ctx("q[1, 2, 3, 4]");
-	ctx.dumpState();
-	QuaternionV a = ctx.evaluateAs<QuaternionV>();
-
-	ctx.dumpState();
-	//BOOST_CHECK_EQUAL(a, 
 }

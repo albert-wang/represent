@@ -442,7 +442,7 @@ namespace Represent
 			}
 			else if (it->type == TOKEN_VECTOR)
 			{
-				Math::Vector<Value, 4> vec;
+				Math::Vector4<Value> vec;
 
 				//Advance to the first number.
 				it = convert(boost::next(it, 1), stream.end(), vec[0]);

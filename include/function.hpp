@@ -9,17 +9,17 @@ namespace Represent
 	{
 		virtual void invoke(std::vector<StorageCell>& stack, EvaluationContext& ctx)
 		{
-			return Impl::invoke<Value, StorageCell>(stack, ctx);
+			return Impl::template invoke<Value, StorageCell>(stack, ctx);
 		}
 
 		virtual void invoke(std::vector<StorageCelld>& stack, EvaluationContext& ctx)
 		{
-			return Impl::invoke<double, StorageCelld>(stack, ctx);
+			return Impl::template invoke<double, StorageCelld>(stack, ctx);
 		}
 
 		virtual void invoke(std::vector<StorageCellf>& stack, EvaluationContext& ctx)
 		{
-			return Impl::invoke<float, StorageCellf>(stack, ctx);
+			return Impl::template invoke<float, StorageCellf>(stack, ctx);
 		}
 	};
 

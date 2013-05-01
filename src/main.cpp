@@ -1,10 +1,14 @@
 #include "parser.hpp"
 #include <vector>
 
+#include "vector2.h"
+
 #ifndef TESTING
 int main(int argc, char * argv[])
 {
-	Represent::parse("1+1");
-	return 0;
+	double * d = new double[24];
+	double * e = d + 24;
+
+	std::cout << e - d << "\n";
 }
 #endif
