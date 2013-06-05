@@ -132,10 +132,14 @@ namespace Represent
 		size_t binaryOperator(const char * begin, const char * end, TokenStream& out)
 		{
 			TableEntry entries[] = {
-				{ "+", TOKEN_OPERATOR, OPERATOR_PLUS }, 
-				{ "-", TOKEN_OPERATOR, OPERATOR_MINUS }, 
-				{ "*", TOKEN_OPERATOR, OPERATOR_MULTIPLY }, 
-				{ "/", TOKEN_OPERATOR, OPERATOR_DIVIDE }, 
+				{ "+" , TOKEN_OPERATOR, OPERATOR_PLUS }, 
+				{ "-" , TOKEN_OPERATOR, OPERATOR_MINUS }, 
+				{ "*" , TOKEN_OPERATOR, OPERATOR_MULTIPLY }, 
+				{ "/" , TOKEN_OPERATOR, OPERATOR_DIVIDE },
+				{ ".+", TOKEN_OPERATOR, OPERATOR_COMPONENT_PLUS }, 
+				{ ".-", TOKEN_OPERATOR, OPERATOR_COMPONENT_MINUS }, 
+				{ ".*", TOKEN_OPERATOR, OPERATOR_COMPONENT_MULTIPLY }, 
+				{ "./", TOKEN_OPERATOR, OPERATOR_COMPONENT_DIVIDE },
 			}; 
 
 			size_t size = sizeof(entries) / sizeof(entries[0]);
@@ -296,15 +300,16 @@ namespace Represent
 			TokenStream stream;
 
 			RESTART(begin, start, flags, stream);
-			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_VECTOR, 0, stream));
-			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_VECTOR_DELIMIT, 0, stream));
-			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_VECTOR_DELIMIT, 0, stream));
-			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_VECTOR_DELIMIT, 0, stream));
-			EXPECT(begin, flags, parseNumber(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_VECTOR, 1, stream));
+			stream.push(Token(TOKEN_VECTOR, 0));
+			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_PAREN, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_PAREN, 1, stream));
 			if (success(flags))
 			{
 				out.push(stream);
@@ -321,8 +326,16 @@ namespace Represent
 			TokenStream stream;
 
 			RESTART(begin, start, flags, stream);
-			EXPECT(begin, flags, parseChar(begin, end, 'q', TOKEN_QUATERNION, 0, stream)); 
-			EXPECT(begin, flags, vector(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, 'q', TOKEN_QUATERNION, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_PAREN, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_PAREN, 1, stream));
 			if (success(flags))
 			{
 				out.push(stream);
@@ -339,17 +352,47 @@ namespace Represent
 			TokenStream stream;
 
 			RESTART(begin, start, flags, stream);
-			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_MATRIX, 0, stream));
+			stream.push(Token(TOKEN_MATRIX, 0));
+			EXPECT(begin, flags, parseChar(begin, end, '[', TOKEN_PAREN, 0, stream));
 			EXPECT(begin, flags, vector(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_MATRIX_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_ARG_DELIMIT, 0, stream));
 			EXPECT(begin, flags, vector(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_MATRIX_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_ARG_DELIMIT, 0, stream));
 			EXPECT(begin, flags, vector(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_MATRIX_DELIMIT, 0, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ';', TOKEN_ARG_DELIMIT, 0, stream));
 			EXPECT(begin, flags, vector(begin, end, stream));
-			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_MATRIX, 1, stream));
+			EXPECT(begin, flags, parseChar(begin, end, ']', TOKEN_PAREN, 1, stream));
 			if (success(flags))
 			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			return 0;
+		}
+
+		size_t array(const char * begin, const char * end, TokenStream& out)
+		{
+			const char * start = begin;
+			boost::uint32_t flags = 0;
+			boost::uint32_t count = 1;
+			TokenStream stream;
+
+			RESTART(begin, start, flags, stream);
+			EXPECT(begin, flags, parseChar(begin, end, '{', TOKEN_PAREN, 0, stream));
+			EXPECT(begin, flags, expression(begin, end, stream)); 
+			while(!parseChar(begin, end, '}', TOKEN_PAREN, 1, stream) && success(flags))
+			{
+				EXPECT(begin, flags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
+				EXPECT(begin, flags, expression(begin, end, stream));
+				count++;
+			}
+
+			if (success(flags))
+			{
+				//Consume the '}'.
+				begin++;
+				out.push(Token(TOKEN_ARRAY, count));
 				out.push(stream);
 				return begin - start;
 			}
@@ -363,9 +406,17 @@ namespace Represent
 			boost::uint32_t flags = 0;
 			TokenStream stream;
 
+			RESTART(begin, start, flags, stream); 
+			EXPECT(begin, flags, unaryOperator(begin, end, stream));
+			EXPECT(begin, flags, value(begin, end, stream));
+			if (success(flags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
 			//Number?
 			RESTART(begin, start, flags, stream);
-			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, parseNumber(begin, end, stream));
 			if (success(flags)) 
 			{
@@ -375,7 +426,6 @@ namespace Represent
 
 			//Function call?
 			RESTART(begin, start, flags, stream);
-			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, function(begin, end, stream));
 			if (success(flags))
 			{
@@ -394,7 +444,6 @@ namespace Represent
 
 			//Vector?
 			RESTART(begin, start, flags, stream);
-			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, vector(begin, end, stream));
 			if (success(flags))
 			{
@@ -404,7 +453,6 @@ namespace Represent
 
 			//Quat?
 			RESTART(begin, start, flags, stream);
-			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, quaternion(begin, end, stream));
 			if (success(flags))
 			{
@@ -414,7 +462,6 @@ namespace Represent
 
 			//Matrix?
 			RESTART(begin, start, flags, stream);
-			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, matrix(begin, end, stream));
 			if (success(flags))
 			{
@@ -424,7 +471,6 @@ namespace Represent
 
 			//Identifier?
 			RESTART(begin, start, flags, stream);
-			MAYBE(begin, flags, unaryOperator(begin, end, stream));
 			EXPECT(begin, flags, identifier(begin, end, stream));
 			if (success(flags))
 			{
@@ -441,11 +487,30 @@ namespace Represent
 			boost::uint32_t parsingFlags = 0;
 			TokenStream stream;
 
+			//Array >> op >> expression
+			RESTART(begin, start, parsingFlags, stream);
+			EXPECT(begin, parsingFlags, array(begin, end, stream));
+			EXPECT(begin, parsingFlags, binaryOperator(begin, end, stream));
+			EXPECT(begin, parsingFlags, expression(begin, end, stream));
+			if (success(parsingFlags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
 			//number >> op >> expression
 			RESTART(begin, start, parsingFlags, stream);
 			EXPECT(begin, parsingFlags, value(begin, end, stream));
 			EXPECT(begin, parsingFlags, binaryOperator(begin, end, stream));
 			EXPECT(begin, parsingFlags, expression(begin, end, stream));
+			if (success(parsingFlags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			RESTART(begin, start, parsingFlags, stream);
+			EXPECT(begin, parsingFlags, array(begin, end, stream));
 			if (success(parsingFlags))
 			{
 				out.push(stream);
@@ -505,23 +570,11 @@ namespace Represent
 		size_t consumed = Parse::expression(begin, end, result);
 		if (begin + consumed != end)
 		{
-			//Failure to parse entire input - return empty.
-			/*
 			std::cout << "INPUT: " << data << "\n";
 			std::cout << "Failed to parse entire output array, ended: " << consumed << " chars at " << std::string(begin + consumed, end) << "\n";
-			*/
+			
 			return TokenStream();
 		}
-
-		/*
-		expression = (unary_operator?) >> value | variable | function [ >> binary_operator >> unary_operator? >> expression ]
-
-		value = vector | matrix | quaternion | number | identifier | guid | string
-		operator = ...
-		function = identifier '(' [expression {',' expression}] ')' 
-
-
-		*/
 
 		return result;
 	}

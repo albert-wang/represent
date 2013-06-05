@@ -5,6 +5,7 @@
 #include <boost/utility.hpp>
 
 #include "evalutils.hpp"
+#include "function.hpp"
 
 namespace Represent
 {
@@ -38,6 +39,10 @@ namespace Represent
 		{
 			switch(op)
 			{
+				case OPERATOR_UNARY_PLUS:
+				case OPERATOR_UNARY_MINUS:
+					return 1;
+					
 				default: 
 					return 0;
 			}
@@ -56,6 +61,22 @@ namespace Represent
 			}
 
 			return false;
+		}
+
+		bool isFunction(boost::uint32_t type)
+		{
+			switch(type)
+			{
+				case TOKEN_MATRIX:
+				case TOKEN_QUATERNION:
+				case TOKEN_ARRAY:
+				case TOKEN_VECTOR:
+				case TOKEN_FUNCTION_IDENTIFIER:
+					return true;
+
+				default:
+					return false;
+			}
 		}
 	}
 
@@ -162,6 +183,18 @@ namespace Represent
 		}
 	}
 
+	Function * EvaluationContext::functionLookup(const std::string& name)
+	{
+		auto it = identifiers.find(name);
+		if (it == identifiers.end())
+		{
+			throw 42;
+		}
+
+		StorageCell& cell = storage.at(it->second);
+		return boost::get<Function>(&cell);
+	}
+
 	StorageCell EvaluationContext::evaluate()
 	{
 		//Convert to an RPN representation.
@@ -221,6 +254,10 @@ namespace Represent
 					operatorStack.push_back(*it);
 					break;
 				}
+				case TOKEN_MATRIX:
+				case TOKEN_QUATERNION:
+				case TOKEN_ARRAY:
+				case TOKEN_VECTOR:
 				case TOKEN_FUNCTION_IDENTIFIER:
 				{
 					operatorStack.push_back(*it);
@@ -291,7 +328,7 @@ namespace Represent
 						}
 
 						Token ident = operatorStack.back();
-						if (ident.type != TOKEN_FUNCTION_IDENTIFIER)
+						if (!isFunction(ident.type))
 						{
 							throw "This call is not a function.";
 						}
@@ -339,170 +376,161 @@ namespace Represent
 
 		for (auto it = stream.begin(); it != stream.end();)
 		{
-			while (it != stream.end() 
-				&& it->type != TOKEN_BASE_FLAG
-				&& it->type != TOKEN_FUNCTION_IDENTIFIER
-				&& it->type != TOKEN_IDENTIFIER_RAW
-				&& it->type != TOKEN_STRING_START
-				&& it->type != TOKEN_VECTOR
-				&& it->type != TOKEN_QUATERNION 
-				&& it->type != TOKEN_MATRIX
-				) 
+			switch (it->type)
 			{
-				result.push(*it);
-				++it;
-			}
-
-			if (it == stream.end())
-			{
-				break;
-			}
-
-			//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
-			//which represents a number. Convert it, and push a TOKEN_STORAGE_REFERENCE instead.
-			if (it->type == TOKEN_BASE_FLAG)
-			{
-				boost::uint32_t index = storage.size();
-
-				Value value; 
-				it = convert(it, stream.end(), value);
-				storage.push_back(value);
-				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
-			}
-			else if (it->type == TOKEN_FUNCTION_IDENTIFIER)
-			{
-				Identifier ident;
-				it = convertIdentifier(boost::next(it, 1), stream.end(), ident.name);
-
-				auto lookup = identifiers.find(ident.name);
-				if (lookup == identifiers.end())
-				{
-					//Allocate a storage cell for the identifier. 
-					boost::uint32_t idIndex = storage.size();
-					storage.push_back(Null());
-
-					identifiers[ident.name] = idIndex;
-				} 
-
-				auto identLookup = identifierStorages.find(ident.name);
-				if (identLookup == identifierStorages.end())
+				//If its a TOKEN_BASE_FLAG, then what follows is a series of numbers
+				//which represents a number. Convert it, and push a TOKEN_STORAGE_REFERENCE instead.
+				case TOKEN_BASE_FLAG: 
 				{
 					boost::uint32_t index = storage.size();
-					storage.push_back(ident);
 
-					identifierStorages[ident.name] = index;
-					result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index));
-				}
-				else 
-				{
-					result.push(Token(TOKEN_FUNCTION_IDENTIFIER, identLookup->second));
-				}
-			}
-			//Similarly, for a TOKEN_IDENTIFIER_RAW, what follows is a series of characters.
-			//Convert to a string, and push it as a TOKEN_STORAGE_REFERENCE 
-			else if (it->type == TOKEN_IDENTIFIER_RAW)
-			{
-				Identifier ident;
-				it = convertIdentifier(it, stream.end(), ident.name);
-
-				auto lookup = identifiers.find(ident.name);
-				if (lookup == identifiers.end())
-				{
-					//Allocate a storage cell for the identifier. 
-					boost::uint32_t idIndex = storage.size();
-					storage.push_back(Null());
-
-					identifiers[ident.name] = idIndex;
-				} 
-
-				auto identLookup = identifierStorages.find(ident.name);
-				if (identLookup == identifierStorages.end())
-				{
-					boost::uint32_t index = storage.size();
-					storage.push_back(ident);
-
-					identifierStorages[ident.name] = index;
+					Value value; 
+					it = convert(it, stream.end(), value);
+					storage.push_back(value);
 					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
-				} 
-				else
-				{
-					result.push(Token(TOKEN_STORAGE_REFERENCE, identLookup->second));
+					break;
 				}
-			}
-			else if (it->type == TOKEN_STRING_START)
-			{
-				//Convert the iterator length into a string.
-				std::string str;
-				it = convertString(it, stream.end(), str);
 
-				boost::uint32_t index = storage.size();
-				storage.push_back(str);
+				case TOKEN_FUNCTION_IDENTIFIER:
+				{
+					Identifier ident;
+					it = convertIdentifier(boost::next(it, 1), stream.end(), ident.name);
 
-				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
-			}
-			else if (it->type == TOKEN_VECTOR)
-			{
-				Math::Vector4<Value> vec;
+					auto lookup = identifiers.find(ident.name);
+					if (lookup == identifiers.end())
+					{
+						//Allocate a storage cell for the identifier. 
+						boost::uint32_t idIndex = storage.size();
+						storage.push_back(Null());
 
-				//Advance to the first number.
-				it = convert(boost::next(it, 1), stream.end(), vec[0]);
-				it = convert(boost::next(it, 1), stream.end(), vec[1]);
-				it = convert(boost::next(it, 1), stream.end(), vec[2]);
-				it = convert(boost::next(it, 1), stream.end(), vec[3]);
+						identifiers[ident.name] = idIndex;
+					} 
 
-				//Consume the final TOKEN_VECTOR 
-				++it;
+					auto identLookup = identifierStorages.find(ident.name);
+					if (identLookup == identifierStorages.end())
+					{
+						boost::uint32_t index = storage.size();
+						storage.push_back(ident);
 
-				boost::uint32_t index = storage.size();
-				storage.push_back(vec);
+						identifierStorages[ident.name] = index;
+						result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index));
+					}
+					else 
+					{
+						result.push(Token(TOKEN_FUNCTION_IDENTIFIER, identLookup->second));
+					}
 
-				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
-			}
-			else if (it->type == TOKEN_QUATERNION)
-			{
-				Math::Quaternion<Value> quat;
-				//Advance to the first number, skipping TOKEN_QUATERNION and TOKEN_VECTOR.
-				it = convert(boost::next(it, 2), stream.end(), quat.w);
-				it = convert(boost::next(it, 1), stream.end(), quat.x);
-				it = convert(boost::next(it, 1), stream.end(), quat.y);
-				it = convert(boost::next(it, 1), stream.end(), quat.z);
+					break;
+				}
 
-				//Consume the final TOKEN_VECTOR 
-				++it;
+				//Similarly, for a TOKEN_IDENTIFIER_RAW, what follows is a series of characters.
+				//Convert to a string, and push it as a TOKEN_STORAGE_REFERENCE 
+				case TOKEN_IDENTIFIER_RAW:
+				{
+					Identifier ident;
+					it = convertIdentifier(it, stream.end(), ident.name);
 
-				boost::uint32_t index = storage.size();
-				storage.push_back(quat);
+					auto lookup = identifiers.find(ident.name);
+					if (lookup == identifiers.end())
+					{
+						//Allocate a storage cell for the identifier. 
+						boost::uint32_t idIndex = storage.size();
+						storage.push_back(Null());
 
-				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
-			}
-			else if (it->type == TOKEN_MATRIX)
-			{
-				Math::Matrix4<Value> mat;
+						identifiers[ident.name] = idIndex;
+					} 
 
-				it = convert(boost::next(it, 2), stream.end(), mat(0, 0));
-				it = convert(boost::next(it, 1), stream.end(), mat(0, 1));
-				it = convert(boost::next(it, 1), stream.end(), mat(0, 2));
-				it = convert(boost::next(it, 1), stream.end(), mat(0, 3));
+					auto identLookup = identifierStorages.find(ident.name);
+					if (identLookup == identifierStorages.end())
+					{
+						boost::uint32_t index = storage.size();
+						storage.push_back(ident);
 
-				it = convert(boost::next(it, 2), stream.end(), mat(1, 0));
-				it = convert(boost::next(it, 1), stream.end(), mat(1, 1));
-				it = convert(boost::next(it, 1), stream.end(), mat(1, 2));
-				it = convert(boost::next(it, 1), stream.end(), mat(1, 3));
+						identifierStorages[ident.name] = index;
+						result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+					} 
+					else
+					{
+						result.push(Token(TOKEN_STORAGE_REFERENCE, identLookup->second));
+					}
 
-				it = convert(boost::next(it, 2), stream.end(), mat(2, 0));
-				it = convert(boost::next(it, 1), stream.end(), mat(2, 1));
-				it = convert(boost::next(it, 1), stream.end(), mat(2, 2));
-				it = convert(boost::next(it, 1), stream.end(), mat(2, 3));
+					break;
+				}
 
-				it = convert(boost::next(it, 2), stream.end(), mat(3, 0));
-				it = convert(boost::next(it, 1), stream.end(), mat(3, 1));
-				it = convert(boost::next(it, 1), stream.end(), mat(3, 2));
-				it = convert(boost::next(it, 1), stream.end(), mat(3, 3));
+				case TOKEN_STRING_START:
+				{
+					//Convert the iterator length into a string.
+					std::string str;
+					it = convertString(it, stream.end(), str);
 
-				boost::uint32_t index = storage.size();
-				storage.push_back(mat);
+					boost::uint32_t index = storage.size();
+					storage.push_back(str);
 
-				result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+					break;
+				}
+				
+				case TOKEN_MATRIX:
+				{
+					Math::Matrix4<Value> mat;
+
+					it = convert(boost::next(it, 2), stream.end(), mat(0, 0));
+					it = convert(boost::next(it, 1), stream.end(), mat(0, 1));
+					it = convert(boost::next(it, 1), stream.end(), mat(0, 2));
+					it = convert(boost::next(it, 1), stream.end(), mat(0, 3));
+
+					it = convert(boost::next(it, 2), stream.end(), mat(1, 0));
+					it = convert(boost::next(it, 1), stream.end(), mat(1, 1));
+					it = convert(boost::next(it, 1), stream.end(), mat(1, 2));
+					it = convert(boost::next(it, 1), stream.end(), mat(1, 3));
+
+					it = convert(boost::next(it, 2), stream.end(), mat(2, 0));
+					it = convert(boost::next(it, 1), stream.end(), mat(2, 1));
+					it = convert(boost::next(it, 1), stream.end(), mat(2, 2));
+					it = convert(boost::next(it, 1), stream.end(), mat(2, 3));
+
+					it = convert(boost::next(it, 2), stream.end(), mat(3, 0));
+					it = convert(boost::next(it, 1), stream.end(), mat(3, 1));
+					it = convert(boost::next(it, 1), stream.end(), mat(3, 2));
+					it = convert(boost::next(it, 1), stream.end(), mat(3, 3));
+
+					boost::uint32_t index = storage.size();
+					storage.push_back(mat);
+
+					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+					break;
+				}
+
+				//Unary operator folding. Multiple unary operators are collapsed into a single unary operator.
+				case TOKEN_OPERATOR:
+				{
+					result.push(*it);
+
+					if (it->value == OPERATOR_UNARY_MINUS)
+					{
+						do 
+						{
+							++it;
+						} while (it != stream.end() && it->type == TOKEN_OPERATOR && it->value == OPERATOR_UNARY_MINUS);
+					}
+					else if (it->value == OPERATOR_UNARY_PLUS)
+					{
+						do 
+						{
+							++it;
+						} while (it != stream.end() && it->type == TOKEN_OPERATOR && it->value == OPERATOR_UNARY_PLUS);
+					} else {
+						++it;
+					}
+
+					break;
+				}
+
+				default: 
+				{
+					result.push(*it);
+					++it;
+				}
 			}
 		}
 

@@ -134,7 +134,16 @@ BOOST_AUTO_TEST_CASE(parse_unary_minus)
 BOOST_AUTO_TEST_CASE(parse_multiple_unary_op)
 {
 	TokenStream tokens = Represent::parse("+++++4");
-	BOOST_CHECK(tokens.begin() == tokens.end());
+	boost::uint32_t expected[] = {
+		TOKEN_OPERATOR, OPERATOR_UNARY_PLUS, 
+		TOKEN_OPERATOR, OPERATOR_UNARY_PLUS, 
+		TOKEN_OPERATOR, OPERATOR_UNARY_PLUS, 
+		TOKEN_OPERATOR, OPERATOR_UNARY_PLUS, 
+		TOKEN_OPERATOR, OPERATOR_UNARY_PLUS, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4
+	};
+
+	AUTO_COMPARE(tokens, expected);
 }
 
 BOOST_AUTO_TEST_CASE(parse_function)
@@ -175,19 +184,6 @@ BOOST_AUTO_TEST_CASE(parse_identifier)
 	};
 
 	AUTO_COMPARE(tokens, expected);
-	/*
-	"abc = defun [pop,pop,pop,*,*,push]"
-	 dot = defun { 
-		a pop = 
-		b pop =
-
-		a 0 ind b 0 ind *
-		a 1 ind b 1 ind *
-		a 2 ind b 2 ind *
-		a 3 ind b 3 ind *
-		+ + +
-	}
-	*/
 }
 
 BOOST_AUTO_TEST_CASE(parse_identifier_2)
@@ -252,14 +248,68 @@ BOOST_AUTO_TEST_CASE(parse_vector)
 	TokenStream tokens = Represent::parse("[1, 2, 3, 4]");
 	boost::uint32_t expected[] = {
 		TOKEN_VECTOR, 0, 
+		TOKEN_PAREN, 0,
 		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1, 
-		TOKEN_VECTOR_DELIMIT, 0, 
+		TOKEN_ARG_DELIMIT, 0, 
 		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 2, 
-		TOKEN_VECTOR_DELIMIT, 0, 
+		TOKEN_ARG_DELIMIT, 0, 
 		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 3, 
-		TOKEN_VECTOR_DELIMIT, 0, 
+		TOKEN_ARG_DELIMIT, 0, 
 		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, 
-		TOKEN_VECTOR, 1
+		TOKEN_PAREN, 1
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_quaternion) 
+{
+	TokenStream tokens = Represent::parse("q[1, 2, 3, 4]");
+	boost::uint32_t expected[] = {
+		TOKEN_QUATERNION, 0, 
+		TOKEN_PAREN, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1, 
+		TOKEN_ARG_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 2, 
+		TOKEN_ARG_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 3, 
+		TOKEN_ARG_DELIMIT, 0, 
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, 
+		TOKEN_PAREN, 1
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_array_simple)
+{
+	TokenStream tokens = Represent::parse("{1}");
+	boost::uint32_t expected[] = {
+		TOKEN_ARRAY, 1, 
+		TOKEN_PAREN, 0,
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1, 
+		TOKEN_PAREN, 1
+	};
+
+	AUTO_COMPARE(tokens, expected);
+}
+
+BOOST_AUTO_TEST_CASE(parse_array_simple_2)
+{
+	TokenStream tokens = Represent::parse("{1, 2, 3, 4, 5}");
+	boost::uint32_t expected[] = {		
+		TOKEN_ARRAY, 5,
+		TOKEN_PAREN, 0,
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 1,  
+		TOKEN_ARG_DELIMIT, 0,
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 2, 
+		TOKEN_ARG_DELIMIT, 0,
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 3, 
+		TOKEN_ARG_DELIMIT, 0,
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 4, 
+		TOKEN_ARG_DELIMIT, 0,
+		TOKEN_BASE_FLAG, 10, TOKEN_NUMBER, 5, 
+		TOKEN_PAREN, 1
 	};
 
 	AUTO_COMPARE(tokens, expected);

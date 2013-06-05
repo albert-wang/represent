@@ -28,6 +28,7 @@ point values.
 	123456         | integer, parsed as decimal.
 	[0, 1, 2, 3]   | Vector of floats. A vector must have 4 elements. All vectors are row-major.
 	q[0, 1, 2, 3]  | Quaternion of floats. The format is in w, x, y, z format.
+	{T, T, T ...}  | Array of elements.
 	zero()         | Zero vector. N may be 2, 3, or 4.
 	unitX()        | Unit vector in the X direction
 	unitY()        | Unit vector in the Y direction
@@ -37,7 +38,6 @@ point values.
 	e              | A high precision representation of e
 	[v;v;v;v]      | Matrix. Each vector must have the same size. Row-major. May omit the []s for the vectors.
 	ident()        | Identity matrix
-	{guid}         | A 128-bit GUID. The character '-' is ignored here. Hex only.
 	`string`       | A string. Valid escape characters are \`.wrq1w1
 
 Allowed operators are:
@@ -93,6 +93,15 @@ If this is not specified, then the output is split at every 8 bits for binary, a
 for hexadecimal. 64 bits are displayed for Binary, Hex, and octal representations. With no format, 
 objects are displayed in binary, hex and binary. If only one format is specified, then no format
 descriptor is printed.
+
+Functions
+----------------------------------------------
+Functions are defined in lua. The lua API is fairly simple, 
+
+    function dotp(stack)
+    	local va, vb = stack:pop('vector', 'vector')
+    	return va.dot(vb)
+    end
 
 Output Examples
 ----------------------------------------------

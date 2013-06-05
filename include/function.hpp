@@ -42,4 +42,30 @@ namespace Represent
 			cell.push_back(T(scalar.length()));
 		}
 	};
+
+	struct Duplicate
+	{
+		template<typename T, typename Cell>
+		static void invoke(std::vector<Cell>& cell, EvaluationContext& ctx)
+		{
+			Cell top = cell.back();
+			cell.push_back(top);
+		}
+	};
+
+	struct MakeQuaternion
+	{
+		template<typename T, typename Cell>
+		static void invoke(std::vector<Cell>& cell, EvaluationContext& ctx)
+		{
+			Math::Quaternion<T> quat;
+
+			quat.z = Detail::popAs<T>(cell);
+			quat.y = Detail::popAs<T>(cell);
+			quat.x = Detail::popAs<T>(cell);
+			quat.w = Detail::popAs<T>(cell);
+
+			cell.push_back(quat);
+		}
+	};
 }

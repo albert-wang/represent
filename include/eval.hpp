@@ -1,5 +1,6 @@
 #include <boost/variant.hpp>
 #include <boost/unordered_map.hpp>
+#include <vector>
 
 #include "vector2.h"
 #include "quaternion.h"
@@ -9,7 +10,28 @@
 
 #pragma once
 namespace Represent
-{
+{	
+	namespace Detail
+	{
+		template<typename T, typename Cell>
+		T popAs(std::vector<Cell>& stack)
+		{
+			Cell top = stack.back();
+			stack.pop_back();
+
+			return boost::get<T>(top);
+		}
+
+		template<typename Cell>
+		Cell pop(std::vector<Cell>& stack)
+		{
+			Cell top = stack.back();
+			stack.pop_back();
+
+			return top;
+		}
+	}
+
 	class EvaluationContext;
 	struct Identifier;
 	struct Null;
@@ -51,7 +73,9 @@ namespace Represent
 	template<typename T>
 	struct Storage
 	{
-		typedef boost::variant<T, Math::Vector4<T>, Math::Quaternion<T>, Math::Matrix4<T>, std::string, Function, Identifier, Null> type;
+		typedef typename boost::make_recursive_variant<
+			T, Math::Vector4<T>, Math::Quaternion<T>, Math::Matrix4<T>, std::vector< boost::recursive_variant_ >, std::string, Function, Identifier, Null
+		>::type type;
 	};
 
 	typedef Storage<Value>::type StorageCell;
@@ -73,6 +97,10 @@ namespace Represent
 			{
 				*result = u;
 			}
+
+			template<typename U>
+			void operator()(const std::vector<U>& u)
+			{}
 
 			void operator()(const Value& v)
 			{
@@ -182,18 +210,28 @@ namespace Represent
 			return boost::get<T>(evaluateWith<Storage>(rpn));
 		}
 
+		template<typename Storage>
+		StorageCell evaluateWith()
+		{
+			TokenStream rpn = shuntingYard(stream);
+			return evaluateWith<Storage>(rpn);
+		}
+
 		void define(const std::string&, const StorageCell& storage);
 		void dumpState();
 
 		//Looks in storage for a value.
 		StorageCell& lookup(StorageCell& storage);
 	private:
+		Function * functionLookup(const std::string& name);
 
 		//Evaluates an expression with T instead of Value to store intermediates.
 		//This allows one to determine accuracy loss between computations.
 		template<typename T>
 		StorageCell evaluateWith(const TokenStream& rpn)
 		{
+			using namespace Detail;
+
 			typedef typename Storage<T>::type Cell;
 			std::vector<Cell> typedStorage;
 			typedStorage.reserve(storage.size());
@@ -227,6 +265,65 @@ namespace Represent
 						assert(target);
 
 						target->invoke(stack, *this);
+						break;
+					}
+				case TOKEN_VECTOR:
+					{
+						T w = Detail::popAs<T>(stack);
+						T z = Detail::popAs<T>(stack);
+						T y = Detail::popAs<T>(stack);
+						T x = Detail::popAs<T>(stack);
+
+						stack.push_back(Math::Vector4<T>(x, y, z, w));
+						break;
+					}
+				case TOKEN_QUATERNION:
+					{
+						Math::Quaternion<T> quat;
+
+						quat.z = Detail::popAs<T>(stack);
+						quat.y = Detail::popAs<T>(stack);
+						quat.x = Detail::popAs<T>(stack);
+						quat.w = Detail::popAs<T>(stack);
+
+						stack.push_back(quat);
+						break;
+					}
+				case TOKEN_MATRIX:
+					{
+						Math::Vector4<T> d = Detail::popAs<Math::Vector4<T> >(stack);
+						Math::Vector4<T> c = Detail::popAs<Math::Vector4<T> >(stack);
+						Math::Vector4<T> b = Detail::popAs<Math::Vector4<T> >(stack);
+						Math::Vector4<T> a = Detail::popAs<Math::Vector4<T> >(stack);
+
+						Math::Matrix4<T> mat;
+						mat(0, 0) = a[0]; mat(0, 1) = a[1]; mat(0, 2) = a[2]; mat(0, 3) = a[3];
+						mat(1, 0) = b[0]; mat(1, 1) = b[1]; mat(1, 2) = b[2]; mat(1, 3) = b[3];
+						mat(2, 0) = c[0]; mat(2, 1) = c[1]; mat(2, 2) = c[2]; mat(2, 3) = c[3];
+						mat(3, 0) = d[0]; mat(3, 1) = d[1]; mat(3, 2) = d[2]; mat(3, 3) = d[3];
+						stack.push_back(mat);
+
+						break;
+					}
+				case TOKEN_ARRAY:
+					{
+						boost::uint32_t count = it->value;
+						int typeValue = stack.back().which();
+
+						std::vector<Cell> result;
+						for (size_t i = 0; i < count; ++i)
+						{
+							result.push_back(stack.back());
+							if (result.back().which() != typeValue)
+							{
+								throw "Types in the vector not the same!";
+							}
+
+							stack.pop_back();
+						}
+
+						std::reverse(result.begin(), result.end());
+						stack.push_back(result);
 						break;
 					}
 				default:

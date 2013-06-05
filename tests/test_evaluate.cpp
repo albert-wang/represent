@@ -164,6 +164,15 @@ BOOST_AUTO_TEST_CASE(eval_vector_add_vector)
 	BOOST_CHECK_EQUAL(a, Vector4V(3, 5, 7, 9));
 }
 
+BOOST_AUTO_TEST_CASE(expr_vector)
+{
+	Represent::EvaluationContext ctx("[1 + 2, 3, 4, 4]");
+	ctx.dumpState();
+	Vector4V a = ctx.evaluateAs<Vector4V>();
+
+	BOOST_CHECK_EQUAL(a, Vector4V(3, 3, 4, 4));
+}
+
 BOOST_AUTO_TEST_CASE(eval_simple_quat)
 {
 	Represent::EvaluationContext ctx("q[1, 2, 3, 4]");
