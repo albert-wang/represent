@@ -469,37 +469,6 @@ namespace Represent
 					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
 					break;
 				}
-				
-				case TOKEN_MATRIX:
-				{
-					Math::Matrix4<Value> mat;
-
-					it = convert(boost::next(it, 2), stream.end(), mat(0, 0));
-					it = convert(boost::next(it, 1), stream.end(), mat(0, 1));
-					it = convert(boost::next(it, 1), stream.end(), mat(0, 2));
-					it = convert(boost::next(it, 1), stream.end(), mat(0, 3));
-
-					it = convert(boost::next(it, 2), stream.end(), mat(1, 0));
-					it = convert(boost::next(it, 1), stream.end(), mat(1, 1));
-					it = convert(boost::next(it, 1), stream.end(), mat(1, 2));
-					it = convert(boost::next(it, 1), stream.end(), mat(1, 3));
-
-					it = convert(boost::next(it, 2), stream.end(), mat(2, 0));
-					it = convert(boost::next(it, 1), stream.end(), mat(2, 1));
-					it = convert(boost::next(it, 1), stream.end(), mat(2, 2));
-					it = convert(boost::next(it, 1), stream.end(), mat(2, 3));
-
-					it = convert(boost::next(it, 2), stream.end(), mat(3, 0));
-					it = convert(boost::next(it, 1), stream.end(), mat(3, 1));
-					it = convert(boost::next(it, 1), stream.end(), mat(3, 2));
-					it = convert(boost::next(it, 1), stream.end(), mat(3, 3));
-
-					boost::uint32_t index = storage.size();
-					storage.push_back(mat);
-
-					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
-					break;
-				}
 
 				//Unary operator folding. Multiple unary operators are collapsed into a single unary operator.
 				case TOKEN_OPERATOR:
