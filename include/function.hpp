@@ -33,13 +33,24 @@ namespace Represent
 		}
 	};
 
-	struct Strlen
+	struct Len
 	{
 		template<typename T, typename Cell>
 		static void invoke(std::vector<Cell>& cell, EvaluationContext& ctx, size_t arity)
 		{
-			std::string scalar = Detail::popAs<std::string>(cell);
-			cell.push_back(T(scalar.length()));
+			Cell top = Detail::pop(cell);
+
+			std::string * a = boost::get<std::string>(&top);
+			std::vector<Cell> * b = boost::get<std::vector<Cell> >(&top);
+
+			if (a)
+			{
+				cell.push_back(T(a->length()));
+			}
+			else if (b)
+			{
+				cell.push_back(T(b->size()));
+			}
 		}
 	};
 

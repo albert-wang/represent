@@ -22,7 +22,7 @@ int main(int argc, char * argv[])
 	Represent::EvaluationContext ctx(s.str());
 
 	deffun(ctx, "incr", Represent::Increment());
-	deffun(ctx, "strlen", Represent::Strlen());
+	deffun(ctx, "len", Represent::Len());
 
 	ctx.dumpState();
 

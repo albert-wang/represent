@@ -61,7 +61,7 @@ namespace
 	using namespace Represent;
 
 	GenericFunction<Increment> incr;
-	GenericFunction<Strlen> stringlength;
+	GenericFunction<Len> stringlength;
 
 	typedef Math::Vector4<Value> Vector4V;
 	typedef Math::Quaternion<Value> QuaternionV;
