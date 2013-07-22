@@ -1,8 +1,16 @@
 #include "eval.hpp"
 #include "evalutils.hpp"
+#include "function.hpp"
 #include <sstream>
 
 #ifndef TESTING
+template<typename F>
+void deffun(Represent::EvaluationContext& ctx, const std::string& name, F f)
+{
+	Represent::GenericFunction<F> func;
+	ctx.define(name, Represent::Function(func));
+}
+
 int main(int argc, char * argv[])
 {
 	std::stringstream s;
@@ -12,6 +20,10 @@ int main(int argc, char * argv[])
 	}
 
 	Represent::EvaluationContext ctx(s.str());
+
+	deffun(ctx, "incr", Represent::Increment());
+	deffun(ctx, "strlen", Represent::Strlen());
+
 	ctx.dumpState();
 
 	Represent::StorageCell full = ctx.evaluateWith<Represent::Value>();

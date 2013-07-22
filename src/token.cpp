@@ -5,11 +5,18 @@ namespace Represent
 	Token::Token(TokenType type, boost::uint32_t value)
 		:type(type)
 		,value(value)
+		,extra(0)
+	{}
+
+	Token::Token(TokenType type, boost::uint32_t value, boost::uint16_t extra)
+		:type(type)
+		,value(value)
+		,extra(extra)
 	{}
 
 	bool Token::operator==(const Token& tk) const
 	{
-		return type == tk.type && value == tk.value;
+		return type == tk.type && value == tk.value && extra == tk.extra;
 	}
 
 	bool Token::operator!=(const Token& tk) const
@@ -19,7 +26,11 @@ namespace Represent
 
 	std::ostream& operator<<(std::ostream& o, const Token& tk)
 	{
-		o << tk.type << "(" << tk.value << ")";
+		o << static_cast<TokenType>(tk.type) << "(" << tk.value << ")";
+		if (tk.extra != 0)
+		{
+			o << "[" << tk.extra <<"]";
+		}
 		return o;
 	}
 

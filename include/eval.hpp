@@ -39,7 +39,7 @@ namespace Represent
 
 	//Forward decls.
 	template<typename T>
-	void invokeBacking(IFunctionImpl * backing, std::vector<T>& stack, EvaluationContext& ctx);
+	void invokeBacking(IFunctionImpl * backing, std::vector<T>& stack, EvaluationContext& ctx, size_t arity);
 
 	template<typename Value, typename Cell>
 	void evaluateOperator(boost::uint32_t op, std::vector<Cell>& stack, EvaluationContext& ctx);
@@ -49,9 +49,9 @@ namespace Represent
 		explicit Function(IFunctionImpl& impl);
 
 		template<typename T>
-		void invoke(std::vector<T>& stack, EvaluationContext& ctx)
+		void invoke(std::vector<T>& stack, EvaluationContext& ctx, size_t arity)
 		{
-			invokeBacking(backing, stack, ctx);
+			invokeBacking(backing, stack, ctx, arity);
 		}
 
 		std::string name;
@@ -180,9 +180,9 @@ namespace Represent
 	//Implements a function.
 	struct IFunctionImpl
 	{
-		virtual void invoke(std::vector<StorageCell>& stack, EvaluationContext& ctx) = 0;
-		virtual void invoke(std::vector<StorageCelld>& stack, EvaluationContext& ctx) = 0;
-		virtual void invoke(std::vector<StorageCellf>& stack, EvaluationContext& ctx) = 0;
+		virtual void invoke(std::vector<StorageCell>& stack, EvaluationContext& ctx, size_t arity) = 0;
+		virtual void invoke(std::vector<StorageCelld>& stack, EvaluationContext& ctx, size_t arity) = 0;
+		virtual void invoke(std::vector<StorageCellf>& stack, EvaluationContext& ctx, size_t arity) = 0;
 	};
 
 
@@ -249,6 +249,11 @@ namespace Represent
 			{
 				switch (it->type)
 				{
+				case TOKEN_RAW_VALUE:
+					{
+						stack.push_back(StorageConvert<Cell, T>::convert(Cell(it->value)));
+						break;
+					}
 				case TOKEN_STORAGE_REFERENCE:
 					{
 						stack.push_back(StorageConvert<Cell, T>::convert(lookup(storage.at(it->value))));
@@ -264,7 +269,7 @@ namespace Represent
 						Function * target = boost::get<Function>(&lookup(storage.at(it->value)));
 						assert(target);
 
-						target->invoke(stack, *this);
+						target->invoke(stack, *this, it->extra);
 						break;
 					}
 				case TOKEN_VECTOR:
@@ -353,8 +358,8 @@ namespace Represent
 	}
 
 	template<typename T>
-	void invokeBacking(IFunctionImpl * backing, std::vector<T>& stack, EvaluationContext& ctx)
+	void invokeBacking(IFunctionImpl * backing, std::vector<T>& stack, EvaluationContext& ctx, size_t arity)
 	{
-		backing->invoke(stack, ctx);
+		backing->invoke(stack, ctx, arity);
 	}
 }

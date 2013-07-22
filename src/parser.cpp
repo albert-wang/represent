@@ -25,7 +25,13 @@ namespace Represent
 		}
 
 	#define EXPECT(target, flags, expr) \
-		do { if (flags & PARSE_FLAGS_FAILURE) { break; } size_t result = expr; if (result == 0) { flags |= PARSE_FLAGS_FAILURE; } target += result; } while (false)
+		do { if (flags & PARSE_FLAGS_FAILURE) { break; } 	\
+			size_t result = expr; 							\
+			if (result == 0) { 								\
+				flags |= PARSE_FLAGS_FAILURE; 				\
+			} 												\
+			target += result; 								\
+		} while (false)
 
 	#define MAYBE(target, flags, expr) \
 		do { if (flags & PARSE_FLAGS_FAILURE) { break; } size_t result = expr; target += result; } while (false)
@@ -179,6 +185,7 @@ namespace Represent
 			boost::uint32_t parsingFlags = 0;
 			TokenStream stream;
 
+			size_t args = 1;
 			RESTART(begin, start, parsingFlags, stream);
 			EXPECT(begin, parsingFlags, identifier(begin, end, stream));
 			EXPECT(begin, parsingFlags, parseChar(begin, end, '(', TOKEN_PAREN, 0, stream));
@@ -187,6 +194,7 @@ namespace Represent
 			{
 				EXPECT(begin, parsingFlags, parseChar(begin, end, ',', TOKEN_ARG_DELIMIT, 0, stream));
 				EXPECT(begin, parsingFlags, expression(begin, end, stream));
+				++args;
 			}
 
 
@@ -194,7 +202,7 @@ namespace Represent
 			{
 				//Consume the ')'.
 				begin++;
-				out.push(Token(TOKEN_FUNCTION_IDENTIFIER, 0));
+				out.push(Token(TOKEN_FUNCTION_IDENTIFIER, args));
 				out.push(stream);
 				return begin - start;
 			}
@@ -487,6 +495,19 @@ namespace Represent
 			boost::uint32_t parsingFlags = 0;
 			TokenStream stream;
 
+			//Parenthesized followed by op followed by expression.
+			RESTART(begin, start, parsingFlags, stream);
+			EXPECT(begin, parsingFlags, parseChar(begin, end, '(', TOKEN_PAREN, 0, stream));
+			EXPECT(begin, parsingFlags, expression(begin, end, stream));
+			EXPECT(begin, parsingFlags, parseChar(begin, end, ')', TOKEN_PAREN, 1, stream));
+			EXPECT(begin, parsingFlags, binaryOperator(begin, end, stream));
+			EXPECT(begin, parsingFlags, expression(begin, end, stream));
+			if (success(parsingFlags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
 			//Array >> op >> expression
 			RESTART(begin, start, parsingFlags, stream);
 			EXPECT(begin, parsingFlags, array(begin, end, stream));
@@ -509,6 +530,18 @@ namespace Represent
 				return begin - start;
 			}
 
+			//Parenthesized expression.
+			RESTART(begin, start, parsingFlags, stream);
+			EXPECT(begin, parsingFlags, parseChar(begin, end, '(', TOKEN_PAREN, 0, stream));
+			EXPECT(begin, parsingFlags, expression(begin, end, stream));
+			EXPECT(begin, parsingFlags, parseChar(begin, end, ')', TOKEN_PAREN, 1, stream));
+			if (success(parsingFlags))
+			{
+				out.push(stream);
+				return begin - start;
+			}
+
+			//Single array.
 			RESTART(begin, start, parsingFlags, stream);
 			EXPECT(begin, parsingFlags, array(begin, end, stream));
 			if (success(parsingFlags))

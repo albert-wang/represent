@@ -28,6 +28,7 @@ namespace Represent
 	(TOKEN_MATRIX)			\
 	(TOKEN_MATRIX_DELIMIT)	\
 	(TOKEN_STORAGE_REFERENCE) \
+	(TOKEN_RAW_VALUE)		\
 	(TOKEN_ARRAY)
 
 	MAKE_FULL_ENUM(TokenType, 0, TOKEN_SOURCE);
@@ -50,12 +51,16 @@ namespace Represent
 	struct Token
 	{
 		Token(TokenType type, boost::uint32_t value);
+		Token(TokenType type, boost::uint32_t value, boost::uint16_t extra);
 
 		bool operator==(const Token& other) const;
 		bool operator!=(const Token& other) const;
 
-		TokenType type;
+		boost::uint16_t type;
 		boost::uint32_t value;
+
+		//This is not filled in by the parser, the evaluator may fill this with some extra data.
+		boost::uint16_t extra;
 	};
 	std::ostream& operator<<(std::ostream& o, const Token& tk);
 

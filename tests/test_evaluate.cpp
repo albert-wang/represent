@@ -67,12 +67,7 @@ namespace
 	typedef Math::Quaternion<Value> QuaternionV;
 	typedef Math::Matrix4<Value> Matrix4V;
 }
-/*
-ctx(
-	"add = defun { pop pop + push }"
-	"add(increment(3), increment(4) + 4)"
-	=> 13 
-	*/
+
 BOOST_AUTO_TEST_CASE(test_function_call)
 {
 	Represent::EvaluationContext ctx("increment(4)");
@@ -166,8 +161,7 @@ BOOST_AUTO_TEST_CASE(eval_vector_add_vector)
 
 BOOST_AUTO_TEST_CASE(expr_vector)
 {
-	Represent::EvaluationContext ctx("[1 + 2, 3, 4, 4]");
-	ctx.dumpState();
+	Represent::EvaluationContext ctx("[1 + 2, (3 + 3) / 2, 4, 4]");
 	Vector4V a = ctx.evaluateAs<Vector4V>();
 
 	BOOST_CHECK_EQUAL(a, Vector4V(3, 3, 4, 4));
@@ -176,4 +170,12 @@ BOOST_AUTO_TEST_CASE(expr_vector)
 BOOST_AUTO_TEST_CASE(eval_simple_quat)
 {
 	Represent::EvaluationContext ctx("q[1, 2, 3, 4]");
+}
+
+BOOST_AUTO_TEST_CASE(eval_paren_expr)
+{
+	Represent::EvaluationContext ctx("(2 + 2 * (2 + 3)) / (1 + 2)");
+	Represent::Value a = ctx.evaluateAs<Represent::Value>();
+
+	BOOST_CHECK_EQUAL(a.convert_to<int>(), 4);
 }

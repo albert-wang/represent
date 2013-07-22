@@ -129,21 +129,10 @@ namespace Represent
 	void EvaluationContext::define(const std::string& name, const StorageCell& cell)
 	{
 		auto it = identifiers.find(name);
-		if (it == identifiers.end())
+		//If its not found, then its not used, so don't use up a storage cell for it.
+
+		if (it != identifiers.end())
 		{
-			boost::uint32_t index = storage.size();
-			storage.push_back(cell);
-
-			//Hack to set the function name.
-			Function * maybe = boost::get<Function>(&storage.back());
-			if (maybe)
-			{
-				maybe->name = name;
-			}
-
-			identifiers[name] = index;
-
-		} else {
 			if (typeCheck(storage.at(it->second), cell))
 			{
 				storage.at(it->second) = cell;
@@ -219,6 +208,7 @@ namespace Represent
 		{
 			switch(it->type)
 			{
+				case TOKEN_RAW_VALUE:
 				case TOKEN_STORAGE_REFERENCE:
 				{
 					rpn.push(*it);
@@ -322,19 +312,15 @@ namespace Represent
 
 						operatorStack.pop_back();
 
-						if (operatorStack.empty())
+						if (!operatorStack.empty())
 						{
-							throw "Empty operator stack - no function call token?";
+							Token ident = operatorStack.back();
+							if (isFunction(ident.type))
+							{
+								operatorStack.pop_back();
+								rpn.push(ident);
+							}
 						}
-
-						Token ident = operatorStack.back();
-						if (!isFunction(ident.type))
-						{
-							throw "This call is not a function.";
-						}
-
-						operatorStack.pop_back();
-						rpn.push(ident);
 					}
 					else
 					{
@@ -386,13 +372,30 @@ namespace Represent
 
 					Value value; 
 					it = convert(it, stream.end(), value);
-					storage.push_back(value);
-					result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+
+					//This is ok, since all values are positive here.
+					//All negative numbers are some positive number with operator- applied to it.
+					double trySimpleStorage = value.convert_to<double>();
+					if (floor(trySimpleStorage) == trySimpleStorage &&
+						trySimpleStorage < std::numeric_limits<boost::uint32_t>::max() &&
+						trySimpleStorage > 0)
+					{
+						boost::uint32_t value = static_cast<boost::uint32_t>(trySimpleStorage);;
+						result.push(Token(TOKEN_RAW_VALUE, value));
+					} 
+					else 
+					{
+						storage.push_back(value);
+						result.push(Token(TOKEN_STORAGE_REFERENCE, index));
+					}
+
 					break;
 				}
 
 				case TOKEN_FUNCTION_IDENTIFIER:
 				{
+					size_t arity = it->value;
+
 					Identifier ident;
 					it = convertIdentifier(boost::next(it, 1), stream.end(), ident.name);
 
@@ -413,11 +416,11 @@ namespace Represent
 						storage.push_back(ident);
 
 						identifierStorages[ident.name] = index;
-						result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index));
+						result.push(Token(TOKEN_FUNCTION_IDENTIFIER, index, arity));
 					}
 					else 
 					{
-						result.push(Token(TOKEN_FUNCTION_IDENTIFIER, identLookup->second));
+						result.push(Token(TOKEN_FUNCTION_IDENTIFIER, identLookup->second, arity));
 					}
 
 					break;
