@@ -86,6 +86,11 @@ namespace Represent
 
 	EvaluationContext::EvaluationContext(const std::string& value)
 	{
+		load(value);
+	}
+
+	void EvaluationContext::load(const std::string& value)
+	{
 		TokenStream raw = parse(value);
 
 		//Run a simplification pass on the raw token stream, converting numbers into TOKEN_STACK_REFERENCEs.
@@ -129,10 +134,20 @@ namespace Represent
 	void EvaluationContext::define(const std::string& name, const StorageCell& cell)
 	{
 		auto it = identifiers.find(name);
-		//If its not found, then its not used, so don't use up a storage cell for it.
-
-		if (it != identifiers.end())
+		if (it == identifiers.end())
 		{
+			boost::uint32_t index = storage.size();
+			storage.push_back(cell);
+
+			//Hack to set the function name.
+			Function * maybe = boost::get<Function>(&storage.back());
+			if (maybe)
+			{
+				maybe->name = name;
+			}
+
+			identifiers[name] = index;
+		} else {
 			if (typeCheck(storage.at(it->second), cell))
 			{
 				storage.at(it->second) = cell;

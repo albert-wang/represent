@@ -79,4 +79,8 @@ namespace Represent
 			cell.push_back(quat);
 		}
 	};
+
+	struct MakeArray
+	{
+	};
 }

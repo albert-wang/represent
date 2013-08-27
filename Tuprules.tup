@@ -1,5 +1,5 @@
 CPP = clang++
-LD  = clang++ -lboost_thread -lboost_system -lc++
-CFLAGS = -Wall -Wno-unknown-pragmas -Wno-c++11-extensions -g 
+LD  = clang++ -lboost_thread -lboost_system -lc++ -llua -lluabind
+CFLAGS = -Wall -Wno-unknown-pragmas -Wno-c++11-extensions -g
 
 !cc = |> $(CPP) $(CFLAGS) -c %f -o %o |>

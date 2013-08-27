@@ -195,6 +195,7 @@ namespace Represent
 	public:
 		explicit EvaluationContext(const std::string& text);
 
+		void load(const std::string& expr);
 		StorageCell evaluate();
 
 		template<typename T>
